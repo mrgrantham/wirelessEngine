@@ -2,9 +2,8 @@
 CC=gcc
 
 CFLAGS=-c -g
-
 LDFLAGS=
-SOURCES=main.c
+SOURCES=main.c LISAreceiver.c LISAtransmitter.c stack.c
 OBJECTS=$(SOURCES:.c=.o)
 EXECUTABLE=engine
 
