@@ -1,9 +1,10 @@
 #include "LISAtransmitter.h"
-#include "stack.h"
+#include "queue.h"
 #include "stdlib.h"
 #include "stdio.h"
 #include "string.h"
 
+#define MAX_PACKET_SIZE 64
 
 uint8_t * createPrefix(uint8_t A5) {
   uint8_t * prefix = malloc(16*sizeof(uint8_t));
@@ -19,15 +20,15 @@ uint8_t * createPrefix(uint8_t A5) {
 }
 
 void addToPacket(uint8_t * data, uint8_t dataSize, uint8_t ** packetf, uint8_t * packetSizef) {
-  if (packetSizef[0] == 0) {
-    packetf[0] = malloc(dataSize * sizeof(data[0]));
-  } else {
-    uint8_t * temp = malloc((dataSize+(*packetSizef))* sizeof(uint8_t));
+
+  uint8_t * temp = malloc(MAX_PACKET_SIZE * sizeof(uint8_t));
+  memset(temp, 0, MAX_PACKET_SIZE);
+  if (packetf[0] != NULL) {
     memcpy(temp, packetf[0], packetSizef[0] * sizeof(uint8_t));
-    memcpy(&temp[packetSizef[0]], data, dataSize * sizeof(uint8_t));
     free(packetf[0]);
-    packetf[0] = temp;
   }
+  memcpy(&temp[packetSizef[0]], data, dataSize * sizeof(uint8_t));
+  packetf[0] = temp;
   *packetSizef += dataSize;
 }
 
@@ -66,12 +67,5 @@ void composePacket(char * payloadString, uint8_t ** packet, uint8_t * packetSize
 void sendBit(uint8_t bit) {
   // set pin to high or low
   // until that code is ready just do printf
-  TransmissionItem *item = malloc(sizeof(TransmissionItem));
-  item->next = NULL;
-  if(bit){
-    item->val = 1;
-  } else {
-    item->val = 0;
-  }
-  push(item);
+  push(bit);
 }

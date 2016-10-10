@@ -1,7 +1,7 @@
 #include "stdlib.h"
 #include "stdio.h"
 #include "string.h"
-#include "stack.h"
+#include "queue.h"
 #include "LISAtransmitter.h"
 #include "LISAreceiver.h"
 
@@ -21,13 +21,19 @@ int main() {
   payloadStringReceived = "fuck this";
   char * payloadString = malloc(32);
   memcpy(payloadString,payloadStringReceived,strlen(payloadStringReceived));
+
+
   composePacket(payloadString, &packet, &packetSize);
-  printReadyPacket(packet, packetSize);
+  printReadyPacket(packet, 64);
+
+
   sendPacket(packet, packetSize);
+
+  printTransmissionLine();
 
   findPacket();
 
-  printf("%s",payloadStringReceived);
+  printf("%s\n",payloadStringReceived);
 
   return 0;
 }
