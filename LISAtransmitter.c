@@ -34,19 +34,21 @@ void addToPacket(uint8_t * data, uint8_t dataSize, uint8_t ** packetf, uint8_t *
 
 void printReadyPacket(uint8_t *packet, int16_t packetSize) {
   printf("----printReadyPacket----\n");
-  for (int i = 0; i < packetSize; i++) {
+  for (uint8_t i = 0; i < packetSize; i++) {
     printf("[%2d]  %02x %c\n",i,packet[i],packet[i]);
   }
   printf("Packet Size: %u\n", packetSize);
 }
 
-void sendPacket(uint8_t *packet, int16_t packetSize) {
-  for (int i = 0; i < packetSize; i++) {
+
+
+void sendPacket(uint8_t *packet) {
+  for (uint8_t i = 0; i < MAX_PACKET_SIZE; i++) {
     static uint8_t temp;
     temp = packet[i];
-    for (int b = 0; b < 8; b++) {
-        sendBit(temp & 0b00000001);
-        temp <<= 1;
+    printf("\n");
+    for (int8_t b = 7; b >= 0; b--) {
+        sendBit((packet[i] >> b) & 0x01);
     }
 
   }
@@ -57,15 +59,26 @@ void composePacket(char * payloadString, uint8_t ** packet, uint8_t * packetSize
 
   printf("--%s\n",payloadString);
 
-  uint8_t *prefixA = createPrefix(0xA);
-  uint8_t *prefix5 = createPrefix(0x5);
+  uint8_t *prefixA = createPrefix(0x5);
+  uint8_t *prefix5 = createPrefix(0xA);
   addToPacket(prefixA,16,packet,packetSize);
   addToPacket(prefix5,16,packet,packetSize);
   addToPacket((uint8_t*)payloadString, strlen(payloadString), packet , packetSize);
+  (*packet)[63] = '\n';
 }
 
 void sendBit(uint8_t bit) {
   // set pin to high or low
   // until that code is ready just do printf
+  static uint32_t count = 0;
+  static uint32_t byteCount = 0;
+
+  if (count == 0) {
+    //printf("\n[%d] SENT BYTE 0b", byteCount);
+    byteCount++;
+  }
+
+  printf("%d", bit);
   push(bit);
+  count = (count + 1) % 8;
 }
