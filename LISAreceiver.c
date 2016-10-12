@@ -36,7 +36,7 @@ void sendToBuffer(uint8_t aByte,uint8_t *receiverBuffer) {
   byteIndex = (byteIndex + 1) % 8;
 
   if (byteIndex == 0) {
-    bufferIndex = (bufferIndex+1) % 64;
+    bufferIndex = (bufferIndex+1) % RECEIVER_BUFFER_SIZE;
   }
 }
 
@@ -50,7 +50,7 @@ void findPacket() {
 
 }
 
-uint32_t findPrefix(uint8_t *receiverBuffer) {
+int32_t findPrefix(uint8_t *receiverBuffer) {
   static uint8_t matchString[] = {0x50,0x51,0x52,0x53,0x54,0x55,0x56,0x57,
                                   0x58,0x59,0x5a,0x5b,0x5c,0x5d,0x5e,0x5f,
                                   0xa0,0xa1,0xa2,0xa3,0xa4,0xa5,0xa6,0xa7,
@@ -62,11 +62,12 @@ uint32_t findPrefix(uint8_t *receiverBuffer) {
   bufferBitSize <<= 3;
   for(int buffIndex = 0; buffIndex < bufferBitSize; buffIndex++) {
       // make segment to test against matchString
-      printf("buffer subString\n");
+      printf("BUFFER SEG: ");
       uint8_t *buffSegment = makeSubString(buffIndex,
                                               receiverBuffer,
                                               RECEIVER_BUFFER_SIZE,
                                               SEGMENT_SIZE);
+      printArray(buffSegment, SEGMENT_SIZE);
 
 
       // compare segment to each 32 bit section prefixString
@@ -74,17 +75,19 @@ uint32_t findPrefix(uint8_t *receiverBuffer) {
       matchStringBitSize<<=3;
       for (int compareIndex = 0; compareIndex < matchStringBitSize; compareIndex++) {
           // make substring from matchString
-          printf("prefix subString\n");
           uint8_t *matchStrSegment = makeSubString(compareIndex,
                                                   matchString,
                                                   PREFIX_SIZE,
                                                   SEGMENT_SIZE);
+          //printf("--PREFIX SEG: ");
+          //printArray(matchStrSegment, SEGMENT_SIZE);
 
           uint8_t match = 1;
 
+          // now that bytes are aligned they can be compared in 4 iterations
           for(int checkByte = 0; checkByte < SEGMENT_SIZE; checkByte++) {
               if(buffSegment[checkByte] != matchStrSegment[checkByte]) {
-                printf("NOT A MATCH\n\n" );
+                //printf("NOT A MATCH\n\n" );
                 match = 0;
                 break;
               }
@@ -93,21 +96,20 @@ uint32_t findPrefix(uint8_t *receiverBuffer) {
             // return the index for the start of the payload
             printf("-----MATCH-----\n\n" );
             free(buffSegment);
-            printf("buffIndex: %2d compareIndex: %2d\n",buffIndex,compareIndex );
-            return buffIndex + 32 - compareIndex; // return exact index in buffer where payload begins
+            printf("buffIndex: %2d matchStringBitSize: %2d\n",buffIndex,matchStringBitSize );
+            return buffIndex + matchStringBitSize; // return exact index in buffer where payload begins
           }
 
       }
   }
 
-  int mainPayloadIndex;
-  return mainPayloadIndex;
+  return -1;
 }
 
 uint8_t *makeSubString(uint32_t startingDatBitIndex, uint8_t *dataArray, uint32_t dataArraySize, uint32_t subStringSize) {
   //printf("\nstartingDatBitIndex: %d\n dataArraySize: %d\n subStringSize: %d\n",startingDatBitIndex,dataArraySize,subStringSize );
-  printf("----subString source array---\n");
-  printArray(dataArray, dataArraySize);
+  //printf("----subString source array---\n");
+  //printArray(dataArray, dataArraySize);
 
   uint8_t *subString;
   subString = malloc(subStringSize * sizeof(dataArray[0]));
@@ -128,13 +130,13 @@ uint8_t *makeSubString(uint32_t startingDatBitIndex, uint8_t *dataArray, uint32_
     subString[currStrByteIndex] |= (currDatBitIndex-currStrBitIndex > 0) ?
                                     tempStrBit >> (currDatBitIndex-currStrBitIndex):
                                     tempStrBit << (currStrBitIndex-currDatBitIndex);
-    printf("bitIndex %2d subString[%3d]: %2x ",bitIndex, currStrByteIndex,subString[currStrByteIndex]);
-    printBinary(subString[currStrByteIndex]);
-    printf("\n");
+    //printf("bitIndex %2d subString[%3d]: %2x ",bitIndex, currStrByteIndex,subString[currStrByteIndex]);
+    //printBinary(subString[currStrByteIndex]);
+    //printf("\n");
 
   }
-  printf("----subString array---\n");
-  printArray(subString, subStringSize);
+  //printf("----subString array---\n");
+  //printArray(subString, subStringSize);
 
   return subString;
 }
@@ -142,7 +144,15 @@ uint8_t *makeSubString(uint32_t startingDatBitIndex, uint8_t *dataArray, uint32_
 void printArray(uint8_t *data, uint32_t dataSize) {
   printf("ARRAY: ");
    for (int i = 0; i < dataSize; i++) {
-     printf("%x ", data[i]);
+     printf("%0.2x ", data[i]);
+   }
+   printf("\n");
+}
+
+void printArrayChar(uint8_t *data, uint32_t dataSize) {
+  printf("ARRAY: ");
+   for (int i = 0; i < dataSize; i++) {
+     printf("%0.2x %2c ", data[i],data[i]);
    }
    printf("\n");
 }

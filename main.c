@@ -25,18 +25,32 @@ int main() {
   sendPacket(packet);
 
   // random offset to test prefix finding algorithm
-  push(0x1);
-  push(0x1);
-  push(0x1);
-  push(0x1);
-  push(0x1);
   push(0x0);
-  push(0x1);
-  push(0x1);
+  push(0x0);
+  push(0x0);
   push(0x1);
   push(0x0);
   push(0x0);
+  push(0x0);
+  push(0x1);
 
+  push(0x0);
+  push(0x0);
+  push(0x0);
+  push(0x1);
+  push(0x0);
+  push(0x0);
+  push(0x0);
+  push(0x1);
+
+  push(0x1);
+  push(0x1);
+  push(0x1);
+  push(0x1);
+  push(0x1);
+  push(0x1);
+  push(0x1);
+  push(0x1);
   // recieving side
   printTransmissionLine();
 
@@ -56,6 +70,9 @@ int main() {
   uint32_t index;
   index = findPrefix(receiverBuffer);
   printf("\nbitIndex of match %d\n",index);
+  uint8_t *foundPayload = makeSubString(index, receiverBuffer, 1024, 32);
+  printArrayChar(foundPayload, 32);
+
   findPacket();
 
   printf("%s\n",payloadStringReceived);
