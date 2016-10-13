@@ -1,4 +1,5 @@
-src/Engine.o src/Engine.d: ../src/Engine.c \
+src/LISAtransmitter.o src/LISAtransmitter.d: ../src/LISAtransmitter.c \
+ ../src/LISAtransmitter.h ../src/queue.h \
  /Users/dev/Documents/LPCXpresso_8.2.0/workspace/lpc_board_nxp_lpcxpresso_1769/inc/board.h \
  /Users/dev/Documents/LPCXpresso_8.2.0/workspace/lpc_chip_175x_6x/inc/chip.h \
  /Users/dev/Documents/LPCXpresso_8.2.0/workspace/lpc_chip_175x_6x/inc/lpc_types.h \
@@ -40,8 +41,11 @@ src/Engine.o src/Engine.d: ../src/Engine.c \
  /Users/dev/Documents/LPCXpresso_8.2.0/workspace/lpc_board_nxp_lpcxpresso_1769/inc/board_api.h \
  /Users/dev/Documents/LPCXpresso_8.2.0/workspace/lpc_chip_175x_6x/inc/lpc_types.h \
  /Users/dev/Documents/LPCXpresso_8.2.0/workspace/lpc_board_nxp_lpcxpresso_1769/inc/lpc_phy.h \
- /Users/dev/Documents/LPCXpresso_8.2.0/workspace/lpc_board_nxp_lpcxpresso_1769/inc/board.h \
- ../src/queue.h ../src/LISAtransmitter.h ../src/LISAreceiver.h
+ /Users/dev/Documents/LPCXpresso_8.2.0/workspace/lpc_board_nxp_lpcxpresso_1769/inc/board.h
+
+../src/LISAtransmitter.h:
+
+../src/queue.h:
 
 /Users/dev/Documents/LPCXpresso_8.2.0/workspace/lpc_board_nxp_lpcxpresso_1769/inc/board.h:
 
@@ -126,9 +130,3 @@ src/Engine.o src/Engine.d: ../src/Engine.c \
 /Users/dev/Documents/LPCXpresso_8.2.0/workspace/lpc_board_nxp_lpcxpresso_1769/inc/lpc_phy.h:
 
 /Users/dev/Documents/LPCXpresso_8.2.0/workspace/lpc_board_nxp_lpcxpresso_1769/inc/board.h:
-
-../src/queue.h:
-
-../src/LISAtransmitter.h:
-
-../src/LISAreceiver.h:

@@ -5,7 +5,7 @@
  * Generated linker script file for LPC1769
  * Created from library.ldt by FMCreateLinkLibraries
  * Using Freemarker v2.3.23
- * LPCXpresso v8.2.0 [Build 647] [2016-07-18]  on Oct 12, 2016 9:43:50 AM
+ * LPCXpresso v8.2.0 [Build 647] [2016-07-18]  on Oct 13, 2016 11:46:08 AM
  */
 
 GROUP (

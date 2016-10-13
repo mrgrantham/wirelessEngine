@@ -5,20 +5,29 @@
 # Add inputs and outputs from these tool invocations to the build variables 
 C_SRCS += \
 ../src/Engine.c \
+../src/LISAreceiver.c \
+../src/LISAtransmitter.c \
 ../src/cr_startup_lpc175x_6x.c \
 ../src/crp.c \
+../src/queue.c \
 ../src/sysinit.c 
 
 OBJS += \
 ./src/Engine.o \
+./src/LISAreceiver.o \
+./src/LISAtransmitter.o \
 ./src/cr_startup_lpc175x_6x.o \
 ./src/crp.o \
+./src/queue.o \
 ./src/sysinit.o 
 
 C_DEPS += \
 ./src/Engine.d \
+./src/LISAreceiver.d \
+./src/LISAtransmitter.d \
 ./src/cr_startup_lpc175x_6x.d \
 ./src/crp.d \
+./src/queue.d \
 ./src/sysinit.d 
 
 
