@@ -47,7 +47,7 @@ void push(uint8_t val) {
     front=tmp;
   }
   back = tmp;
-
+  //printf("push\n");
 }
 
 
@@ -59,6 +59,7 @@ void pop() {
   } else {
       back = NULL; // no need to deallocate as the first section would already have done that
   }
+  //printf("pop\n");
 }
 
 void printBinary(uint8_t num) {

@@ -25,7 +25,10 @@
 #include <cr_section_macros.h>
 
  #define TICKRATE1_HZ 4
- #define TICKRATE2_HZ 10 // 9600 bps
+ #define TICKRATE2_HZ 9600 // 9600 bps
+
+ #define BLINKS_PER_SEC 1
+ #define BLINK_DELAY (TICKRATE2_HZ/BLINKS_PER_SEC)
 
 #define TX_PORT 0
 #define TX_PIN 9
@@ -41,14 +44,18 @@
 
 uint8_t receiverBuffer[1024];
 
+int sendCount=0;
+int loopCount=0;
+
 char *payloadStringReceived;
 uint8_t *packet;
-uint8_t packetSize=0;
+uint32_t packetSize=0;
 
 LPC_GPIOINT_T GPIOINT_SETUP;
 
 
-void engineTest() {
+void testTransmit() {
+
 	  payloadStringReceived = "JAMES 6912";
 	  char * payloadString = malloc(strlen(payloadStringReceived)+1);
 	  memcpy(payloadString,payloadStringReceived,strlen(payloadStringReceived)+1);
@@ -57,20 +64,7 @@ void engineTest() {
 	  composePacket(payloadString, &packet, &packetSize);
 	  //printReadyPacket(packet, 64);
 
-	  push(0x1);
-	  push(0x1);
-	  push(0x1);
-	  push(0x1);
-	  push(0x1);
-	  push(0x1);
-	  push(0x1);
-	  push(0x1);
-	  push(0x1);
-	  push(0x1);
-	  push(0x1);
-	  push(0x1);
-
-	  sendPacket(packet);
+	  sendPacket(packet,packetSize);
 	  deletePacket(&packet,&packetSize);
 	  //printTransmissionLine();
 
@@ -100,6 +94,15 @@ void engineTest() {
 	*/
 }
 
+void talk() {
+	sendBit();
+	printf("talking\n");
+}
+
+void listen() {
+	  sendToBuffer(readBit(),receiverBuffer);
+}
+
 // Transmit and Receive Test
 void TIMER1_IRQHandler(void)
 {
@@ -121,7 +124,13 @@ void TIMER2_IRQHandler(void)
     uint8_t val = sendBit();
     //printf("%d",val);
   if (val) {
-   Chip_TIMER_ClearMatch(LPC_TIMER2, 1);
+
+   static int counter = 0;
+
+   printf("about to talk\n");
+   talk();
+   listen();
+   /*
    if(On) {
 	   //Chip_GPIO_SetPinOutLow(LPC_GPIO, TX_PORT, TX_PIN);
 	   Chip_GPIO_SetPinOutHigh(LPC_GPIO, TX_PORT, TX_PIN);
@@ -130,11 +139,20 @@ void TIMER2_IRQHandler(void)
 	   Chip_GPIO_SetPinOutLow(LPC_GPIO, TX_PORT, TX_PIN);
 
    }
-   On = (bool) !On;
-   Board_LED_Toggle(1);
+   */
+   if (counter == BLINK_DELAY) {
+	   Board_LED_Toggle(1);
+	   counter = 0;
+	   On = (bool) !On;
+   } else {
+	   counter++;
+   }
   }
-  //printf("TIMER2\n");
-  //engineTest();
+  if (Chip_TIMER_MatchPending(LPC_TIMER2, 1)) {
+	  Chip_TIMER_ClearMatch(LPC_TIMER2, 1);
+  }
+
+  //printf("SENDING BITS and RECEIVING BITS\n");
 
 
 }
@@ -164,9 +182,6 @@ int main(void) {
     Chip_GPIO_SetPinDIRInput(LPC_GPIO, RX_PORT, RX_PIN);
     Chip_GPIO_SetPinDIROutput(LPC_GPIO, TX_PORT, TX_PIN);
 
-    engineTest();
-    engineTest();
-    engineTest();
 
 
     uint32_t timerFreq;
@@ -184,7 +199,7 @@ int main(void) {
     */
     Chip_TIMER_Init(LPC_TIMER2);
     timerFreq = Chip_Clock_GetPeripheralClockRate(SYSCTL_PCLK_TIMER2);
-    //printf("timerFreq: %d\n",timerFreq);
+    printf("timerFreq: %d\n",timerFreq);
     Chip_TIMER_Reset(LPC_TIMER2);
     Chip_TIMER_MatchEnableInt(LPC_TIMER2, 1);
     Chip_TIMER_SetMatch(LPC_TIMER2, 1, (timerFreq / TICKRATE2_HZ));
@@ -205,6 +220,32 @@ int main(void) {
     	}
     }
     */
+    int counter=10000;
+	printf("start the sending loop\n");
+	while(1) {
+		printf("loop cycle: %d\n", counter);
+		if(counter > 10000) {
+			testTransmit();
+			counter =0;
+			sendCount++;
+		}
+		counter++;
+		loopCount++;
+		int32_t index;
+		printf("searching buffer!\n");
+		index = findPrefix(receiverBuffer);
+		if (index > 0) {
+			printf("\nbitIndex of match %d\n",index);
+			uint8_t *foundPayload;
+			makeSubString(&foundPayload,index, receiverBuffer, 128, 32);
+			printArrayChar(foundPayload, 32);
+		}
+		printf("done searching buffer\n");
+
+		//__WFI();
+
+	}
+
 
     Chip_GPIOINT_Init(LPC_GPIOINT);
     Chip_GPIOINT_SetIntFalling(LPC_GPIOINT, GPIOINT_PORT2, (1<<TEST_SWITCH_PIN));

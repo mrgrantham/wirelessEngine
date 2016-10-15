@@ -6,7 +6,8 @@ void sendToBuffer(uint8_t aByte,uint8_t *receiverBuffer);
 void findPacket();
 void printBuffer(uint8_t *receiverBuffer);
 int32_t findPrefix(uint8_t *receiverBuffer);
-uint8_t *makeSubString(uint32_t startingSubStringBitIndex,
+void makeSubString(uint8_t **subString,
+						uint32_t startingSubStringBitIndex,
                         uint8_t *dataArray,
                         uint32_t dataArraySize,
                         uint32_t subStringSize);

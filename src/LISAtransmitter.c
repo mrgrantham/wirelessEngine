@@ -5,6 +5,9 @@
 #include "string.h"
 #include "board.h"
 
+#define TX_PORT 0
+#define TX_PIN 9
+
 //#include "string.h"
 
 #define MAX_PACKET_SIZE 64
@@ -45,10 +48,10 @@ void printReadyPacket(uint8_t *packet, int16_t packetSize) {
 
 
 
-void sendPacket(uint8_t *packet) {
+void sendPacket(uint8_t *packet, uint32_t packetSize) {
 	if (packet != NULL) {
-		for (uint32_t i = 0; i < MAX_PACKET_SIZE; i++) {
-			printf("sendPacket i: %d packet[i] = %c\n",i,packet[i]);
+		for (uint32_t i = 0; i < packetSize; i++) {
+			//printf("sendPacket i: %d packet[i] = %c\n",i,packet[i]);
 			for (int32_t b = 7; b >= 0; b--) {
 				pushBit((packet[i]>>b) & 0x01);
 			}
@@ -74,7 +77,7 @@ void composePacket(char * payloadString, uint8_t ** packet, uint32_t * packetSiz
   addToPacket(prefix5,16,packet,packetSize);
   addToPacket(prefixA,16,packet,packetSize);
   addToPacket((uint8_t*)payloadString, strlen(payloadString)+1, packet , packetSize);
-  (*packet)[63] = '\n';
+  addToPacket((uint8_t*)"\n",1, packet , packetSize);
   free(prefixA);
   free(prefix5);
 }
@@ -97,8 +100,15 @@ void pushBit(uint8_t bit) {
 
 uint8_t sendBit() {
   // capture bit
-	uint8_t val = getFront();
-  uint8_t temp = ( val == 0xff)? 0 : val;
+  static uint8_t val;
+  val = getFront();
+  static uint8_t temp;
+  temp = (val == 0xff)? 0 : val;
+  if(temp) {
+	  Chip_GPIO_SetPinOutHigh(LPC_GPIO, TX_PORT, TX_PIN);
+  } else {
+	  Chip_GPIO_SetPinOutLow(LPC_GPIO, TX_PORT, TX_PIN);
+  }
   pop();
   return temp;
 }
