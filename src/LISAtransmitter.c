@@ -70,7 +70,7 @@ void deletePacket(uint8_t **packet, uint32_t *packetSize) {
 
 void composePacket(char * payloadString, uint8_t ** packet, uint32_t * packetSize) {
 
-  printf("--%s\n",payloadString);
+  //printf("--%s\n",payloadString);
 
   uint8_t *prefix5 = createPrefix(0x5);
   uint8_t *prefixA = createPrefix(0xA);

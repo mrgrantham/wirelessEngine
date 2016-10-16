@@ -25,12 +25,24 @@ uint8_t readBit() {
 }
 
 void printTransmissionLine() {
-  uint8_t temp=0;
-  uint32_t index=0;
-  while(temp != 0xff) {
-    temp = getNext(0);
-    if (temp!= 0xff) {
-      printf("[%2d]  %2x %c\n",index,temp,temp);
+	uint8_t temp=0;
+	uint32_t index=1;
+	int32_t count = 1;
+	while(temp != 0xff) {
+		temp = getNext(0);
+		if (temp!= 0xff) {
+			static uint8_t bitLoader = 0;
+			bitLoader |= (temp<<(7-(index%8)));
+			//printf("[%2d]  %2x %c ",index,temp,temp);
+			if(index%8==7) {
+				printBinary(bitLoader);
+				printf(" ");
+				bitLoader=0;
+				if(count%4==0) {
+					printf("\n");
+				}
+				count++;
+			}
     }
     index++;
   }
@@ -50,8 +62,14 @@ void sendToBuffer(uint8_t aByte,uint8_t *receiverBuffer) {
 }
 
 void printBuffer(uint8_t *receiverBuffer) {
-  for (int i; i < 1024; i++) {
-    printf("%2c %2x ", receiverBuffer[i],receiverBuffer[i]);
+  for (int i=0; i < 128; i++) {
+    printf("[%0.2x] ", receiverBuffer[i],receiverBuffer[i]);
+  }
+}
+
+void printBufferChar(uint8_t *receiverBuffer) {
+  for (int i=0; i < 128; i++) {
+    printf("[%2c] ", receiverBuffer[i],receiverBuffer[i]);
   }
 }
 
@@ -70,14 +88,16 @@ int32_t findPrefix(uint8_t *receiverBuffer) {
   static int buffIndex;
   for(buffIndex = 0; buffIndex < bufferBitSize; buffIndex++) {
       // make segment to test against matchString
-      //printf("BUFFER SEG: ");
       static uint8_t *buffSegment=NULL;
       makeSubString(&buffSegment,
     	   	   	   buffIndex,
                    receiverBuffer,
                    RECEIVER_BUFFER_SIZE,
                    SEGMENT_SIZE);
-      //printArray(buffSegment, SEGMENT_SIZE);
+//      printf("BUFFER SEG: ");
+//      printArray(buffSegment, SEGMENT_SIZE);
+//      printArrayBin(buffSegment, SEGMENT_SIZE);
+//      printf("\n");
 
 
       // compare segment to each 32 bit section prefixString
@@ -91,8 +111,10 @@ int32_t findPrefix(uint8_t *receiverBuffer) {
 						  matchString,
 						  PREFIX_SIZE,
 						  SEGMENT_SIZE);
-          //printf("--PREFIX SEG: ");
-          //printArray(matchStrSegment, SEGMENT_SIZE);
+//          printf("--PREFIX SEG: ");
+//          printArray(matchStrSegment, SEGMENT_SIZE);
+//          printArrayBin(matchStrSegment, SEGMENT_SIZE);
+//          printf("\n");
 
           uint8_t match = 1;
 
@@ -122,12 +144,12 @@ int32_t findPrefix(uint8_t *receiverBuffer) {
 }
 
 void makeSubString(uint8_t **subString, uint32_t startingDatBitIndex, uint8_t *dataArray, uint32_t dataArraySize, uint32_t subStringSize) {
-	printf("\nstartingDatBitIndex: %d\n dataArraySize: %d\n subStringSize: %d\n",startingDatBitIndex,dataArraySize,subStringSize );
-	printf("----subString source array---\n");
-	printArray(dataArray, dataArraySize);
-	printf("realloc size: %d",subStringSize * sizeof(dataArray[0]));
-	realloc((*subString), subStringSize * sizeof(dataArray[0]));
-	//memset(*subString, 0, subStringSize * sizeof(dataArray[0]));
+	//printf("\nstartingDatBitIndex: %d\n dataArraySize: %d\n subStringSize: %d\n",startingDatBitIndex,dataArraySize,subStringSize );
+	//printf("----subString source array---\n");
+	//printArray(dataArray, dataArraySize);
+	//printf("realloc size: %d",subStringSize * sizeof(dataArray[0]));
+	*subString = realloc((*subString), subStringSize * sizeof(dataArray[0]));
+	memset(*subString, 0, subStringSize * sizeof(dataArray[0]));
 
 	static int32_t dataArrayBitSize;
 	dataArrayBitSize = dataArraySize << 3;
@@ -164,11 +186,9 @@ void makeSubString(uint8_t **subString, uint32_t startingDatBitIndex, uint8_t *d
 }
 
 void printArray(uint8_t *data, uint32_t dataSize) {
-  printf("ARRAY: ");
    for (int i = 0; i < dataSize; i++) {
      printf("%0.2x ", data[i]);
    }
-   printf("\n");
 }
 
 void printArrayChar(uint8_t *data, uint32_t dataSize) {
@@ -176,5 +196,12 @@ void printArrayChar(uint8_t *data, uint32_t dataSize) {
    for (int i = 0; i < dataSize; i++) {
      printf("%0.2x %2c ", data[i],data[i]);
    }
-   printf("\n");
+}
+
+void printArrayBin(uint8_t *data, uint32_t dataSize) {
+  printf("ARRAY: ");
+   for (int i = 0; i < dataSize; i++) {
+	   printBinary(data[i]);
+     printf(" ");
+   }
 }

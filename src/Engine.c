@@ -24,12 +24,13 @@
 
 #include <cr_section_macros.h>
 
- #define TICKRATE0_HZ 10 // 9600 bps
- #define TICKRATE1_HZ 4
- #define TICKRATE2_HZ 100 // 9600 bps
+ #define TICKRATE0_HZ 100 // 9600 bps
 
- #define BLINKS_PER_SEC 1
- #define BLINK_DELAY (TICKRATE2_HZ/BLINKS_PER_SEC)
+// #define TICKRATE1_HZ 4
+// #define TICKRATE2_HZ 100 // 9600 bps
+
+ #define BLINKS_PER_SEC 10
+ #define BLINK_DELAY (TICKRATE0_HZ/BLINKS_PER_SEC)
 
 #define TX_PORT 0
 #define TX_PIN 9
@@ -59,23 +60,10 @@ void testTransmit() {
 
 
 	  composePacket(payloadString, &packet, &packetSize);
-	  printReadyPacket(packet, 64);
+	  //printReadyPacket(packet, 64);
 
 	  sendPacket(packet,packetSize);
 	  deletePacket(&packet,&packetSize);
-
-}
-
-void TIMER1_IRQHandler(void)
-{
-	static bool On = false;
-
-   if (Chip_TIMER_MatchPending(LPC_TIMER1, 1)) {
-      Chip_TIMER_ClearMatch(LPC_TIMER1, 1);
-      On = (bool) !On;
-      Board_LED_Toggle(0);
-     }
-   printf("TIMER1\n");
 
 }
 
@@ -98,7 +86,7 @@ void TIMER0_IRQHandler(void)
 	sendToBuffer(readBit(),receiverBuffer);
 
 	if (counter == BLINK_DELAY) {
-		Board_LED_Toggle(0);
+		//Board_LED_Toggle(0);
 		Board_LED_Toggle(1);
 		Board_LED_Toggle(2);
 		counter = 0;
@@ -160,36 +148,10 @@ int main(void) {
 	NVIC_EnableIRQ(TIMER0_IRQn);
 
 
-
-    /*
-    Chip_TIMER_Init(LPC_TIMER1);
-    timerFreq = Chip_Clock_GetPeripheralClockRate(SYSCTL_PCLK_TIMER1);
-    Chip_TIMER_Reset(LPC_TIMER1);
-    Chip_TIMER_MatchEnableInt(LPC_TIMER1, 1);
-    Chip_TIMER_SetMatch(LPC_TIMER1, 1, (timerFreq / TICKRATE1_HZ));
-    Chip_TIMER_ResetOnMatchEnable(LPC_TIMER1, 1);
-    Chip_TIMER_Enable(LPC_TIMER1);
-    NVIC_EnableIRQ(TIMER1_IRQn);
-    NVIC_ClearPendingIRQ(TIMER1_IRQn);
-    */
-    /*
-    Chip_TIMER_Init(LPC_TIMER2);
-    timerFreq = Chip_Clock_GetPeripheralClockRate(SYSCTL_PCLK_TIMER2);
-    printf("timerFreq: %d\n",timerFreq);
-    Chip_TIMER_Reset(LPC_TIMER2);
-    Chip_TIMER_MatchEnableInt(LPC_TIMER2, 1);
-    Chip_TIMER_SetMatch(LPC_TIMER2, 1, (timerFreq / TICKRATE2_HZ));
-    Chip_TIMER_ResetOnMatchEnable(LPC_TIMER2, 1);
-    Chip_TIMER_Enable(LPC_TIMER2);
-    NVIC_EnableIRQ(TIMER2_IRQn);
-    NVIC_ClearPendingIRQ(TIMER2_IRQn);
-	*/
-
-
     // TODO: insert code here
-    Board_LED_Set(0, false);
-    Board_LED_Set(1, false);
-    Board_LED_Set(2, false);
+    Board_LED_Set(0, true);
+    Board_LED_Set(1, true);
+    Board_LED_Set(2, true);
 
     // setup external interrupt for receiver
     // setup switch to test external interrupt
@@ -205,24 +167,28 @@ int main(void) {
 	printf("start the sending loop\n");
 	while(1) {
 		printf("loop cycle: %d\n", counter);
-		if(counter > 10000) {
-			testTransmit();
-			counter =0;
-			sendCount++;
-		}
+		testTransmit();
+		printf("TRANSMISSION LINE\n");
+		printTransmissionLine();
+		counter =0;
+		sendCount++;
+
 		counter++;
 		loopCount++;
 		int32_t index;
 		printf("searching buffer!\n");
-		int32_t qs = getQueueSize();
+		//int32_t qs = getQueueSize();
+		//printBuffer(receiverBuffer);
 		index = findPrefix(receiverBuffer);
 		if (index > 0) {
 			printf("\nbitIndex of match %d\n",index);
 			static uint8_t *foundPayload = NULL;;
 			makeSubString(&foundPayload,index, receiverBuffer, 128, 32);
 			printArrayChar(foundPayload, 32);
+		} else {
+			printf("no match in buffer!\n");
 		}
-		printf("done searching buffer\n");
+		printf("done searching\n");
 
 		//__WFI();
 
