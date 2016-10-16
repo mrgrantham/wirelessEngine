@@ -14,19 +14,25 @@
 #define RX_PIN 8
 
 
+#define EXTERNAL_GREEN_LED_PORT 2
+#define EXTERNAL_GREEN_LED_PIN 13
 
 uint8_t readBit() {
   // capture bit
   static uint8_t temp;
   temp =  Chip_GPIO_GetPinState(LPC_GPIO, RX_PORT, RX_PIN);
+  if(temp) {
+	  Chip_GPIO_SetPinOutHigh(LPC_GPIO, EXTERNAL_GREEN_LED_PORT , EXTERNAL_GREEN_LED_PIN );
+  } else {
+	  Chip_GPIO_SetPinOutLow(LPC_GPIO, EXTERNAL_GREEN_LED_PORT , EXTERNAL_GREEN_LED_PIN );
+  }
   //printf("%d",temp);
-  pop();
   return temp;
 }
 
 void printTransmissionLine() {
 	uint8_t temp=0;
-	uint32_t index=1;
+	uint32_t index=0;
 	int32_t count = 1;
 	while(temp != 0xff) {
 		temp = getNext(0);
@@ -62,14 +68,27 @@ void sendToBuffer(uint8_t aByte,uint8_t *receiverBuffer) {
 }
 
 void printBuffer(uint8_t *receiverBuffer) {
-  for (int i=0; i < 128; i++) {
-    printf("[%0.2x] ", receiverBuffer[i],receiverBuffer[i]);
+  for (int i=0; i < RECEIVER_BUFFER_SIZE; i++) {
+    printf("[%0.2x] ", receiverBuffer[i]);
   }
 }
 
 void printBufferChar(uint8_t *receiverBuffer) {
-  for (int i=0; i < 128; i++) {
-    printf("[%2c] ", receiverBuffer[i],receiverBuffer[i]);
+  for (int i=0; i < RECEIVER_BUFFER_SIZE; i++) {
+    printf("[%c ] ", receiverBuffer[i]);
+    if (i%8==7) {
+    	printf("\n");
+    }
+  }
+}
+
+void printBufferBinary(uint8_t *receiverBuffer) {
+  for (int i=0; i < RECEIVER_BUFFER_SIZE; i++) {
+    printBinary(receiverBuffer[i]);
+    printf(" ");
+    if (i%8==7) {
+    	printf("\n");
+    }
   }
 }
 
@@ -130,9 +149,9 @@ int32_t findPrefix(uint8_t *receiverBuffer) {
           //free(matchStrSegment);
           if (match) {
             // return the index for the start of the payload
-            printf("-----MATCH-----\n\n" );
+            //printf("-----MATCH-----\n\n" );
             free(buffSegment);
-            printf("buffIndex: %2d matchStringBitSize: %2d\n",buffIndex,matchStringBitSize );
+            //printf("buffIndex: %2d matchStringBitSize: %2d\n",buffIndex,matchStringBitSize );
             return (buffIndex + matchStringBitSize) % bufferBitSize; // return exact index in buffer where payload begins
           }
 

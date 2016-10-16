@@ -24,12 +24,11 @@
 
 #include <cr_section_macros.h>
 
- #define TICKRATE0_HZ 100 // 9600 bps
+ #define TICKRATE0_HZ 200 // 200 bps
+#define TICKRATE1_HZ 20
+ #define TICKRATE2_HZ 200 // 9600 bps
 
-// #define TICKRATE1_HZ 4
-// #define TICKRATE2_HZ 100 // 9600 bps
-
- #define BLINKS_PER_SEC 10
+ #define BLINKS_PER_SEC 5
  #define BLINK_DELAY (TICKRATE0_HZ/BLINKS_PER_SEC)
 
 #define TX_PORT 0
@@ -40,6 +39,12 @@
 
 #define TEST_SWITCH_PORT 2
 #define TEST_SWITCH_PIN 10
+
+//#define GPIO_IRQ_HANDLER  			GPIO_IRQHandler/* GPIO interrupt IRQ function name */
+
+
+#define EXTERNAL_GREEN_LED_PORT 2
+#define EXTERNAL_GREEN_LED_PIN 13
 // TODO: insert other include files here
 
 // TODO: insert other definitions and declarations here
@@ -75,19 +80,19 @@ void TIMER0_IRQHandler(void)
 	if (Chip_TIMER_MatchPending(LPC_TIMER0, 1)) {
 		Chip_TIMER_ClearMatch(LPC_TIMER0, 1);
 	}
-	uint8_t val = sendBit();
 	//printf("%d",val);
 
 	static int counter = 0;
 
 	// broadcast on antenna
-//	sendBit();
+// 	sendBit();
 	// listen to receiver
-	//sendToBuffer(readBit(),receiverBuffer);
+
+	sendToBuffer(readBit(),receiverBuffer);
 
 	if (counter == BLINK_DELAY) {
 		//Board_LED_Toggle(0);
-		Board_LED_Toggle(1);
+		//Board_LED_Toggle(1);
 		Board_LED_Toggle(2);
 		counter = 0;
 	} else {
@@ -98,14 +103,59 @@ void TIMER0_IRQHandler(void)
 
 
 }
-
 /*
-void GPIO_IRQ_HANDLER(void) {
+void TIMER2_IRQHandler(void){
 
-	printf("EINT3_IRQHandler Activated\n");
-	Chip_GPIOINT_ClearIntStatus(LPC_GPIOINT, GPIOINT_PORT2, TEST_SWITCH_PIN);
+	if (Chip_TIMER_MatchPending(LPC_TIMER2, 1)) {
+		Chip_TIMER_ClearMatch(LPC_TIMER2, 1);
+	}
+	// listen to receiver
+	sendToBuffer(readBit(),receiverBuffer);
+	printf("listening\n");
+
+	static int counter = 0;
+
+	if (counter == BLINK_DELAY) {
+		Board_LED_Toggle(0);
+
+		counter = 0;
+	} else {
+		counter++;
+	}
 }
+
 */
+
+void EINT3_IRQHandler(void) {
+	static uint32_t counter=10;
+	Chip_GPIOINT_ClearIntStatus(LPC_GPIOINT, RX_PORT, 1 << RX_PIN);
+	//Chip_GPIOINT_ClearIntStatus(LPC_GPIOINT, TEST_SWITCH_PORT, 1 << TEST_SWITCH_PIN);
+	int blinkslower= counter%10;
+    if(blinkslower==0) {
+		Chip_GPIO_SetPinToggle(LPC_GPIO, EXTERNAL_GREEN_LED_PORT , EXTERNAL_GREEN_LED_PIN );
+    }
+	/* Enable timer interrupt */
+	/* Enable timer 1 clock */
+	Chip_TIMER_Init(LPC_TIMER2);
+
+	/* Timer rate is system clock rate */
+	uint32_t timerFreq = Chip_Clock_GetPeripheralClockRate(SYSCTL_PCLK_TIMER2);
+	printf("TIMER FREQUENCY %d\n",timerFreq);
+	/* Timer setup for match and interrupt at TICKRATE_HZ */
+	Chip_TIMER_Reset(LPC_TIMER2);
+	Chip_TIMER_MatchEnableInt(LPC_TIMER2, 1);
+	Chip_TIMER_SetMatch(LPC_TIMER2, 1, (timerFreq / TICKRATE2_HZ));
+	Chip_TIMER_ResetOnMatchEnable(LPC_TIMER2, 1);
+	Chip_TIMER_Enable(LPC_TIMER2);
+	NVIC_ClearPendingIRQ(TIMER2_IRQn);
+	NVIC_EnableIRQ(TIMER2_IRQn);
+
+    printf("EINT3_IRQHandler Activated\n");
+	NVIC_DisableIRQ(EINT3_IRQn);
+
+    counter++;
+}
+
 
 int main(void) {
 
@@ -125,17 +175,18 @@ int main(void) {
     Chip_GPIO_SetPinDIRInput(LPC_GPIO, RX_PORT, RX_PIN);
     Chip_GPIO_SetPinDIROutput(LPC_GPIO, TX_PORT, TX_PIN);
 
+    Chip_GPIO_SetPinDIROutput(LPC_GPIO, EXTERNAL_GREEN_LED_PORT, EXTERNAL_GREEN_LED_PIN);
 
 
     uint32_t timerFreq;
     // setup timers
 
-	/* Enable timer 1 clock */
+	/* Enable timer 0 clock */
 	Chip_TIMER_Init(LPC_TIMER0);
 
 	/* Timer rate is system clock rate */
-	timerFreq = Chip_Clock_GetSystemClockRate();
-
+	timerFreq = Chip_Clock_GetPeripheralClockRate(SYSCTL_PCLK_TIMER0);;
+	printf("TIMER FREQUENCY %d\n",timerFreq);
 	/* Timer setup for match and interrupt at TICKRATE_HZ */
 	Chip_TIMER_Reset(LPC_TIMER0);
 	Chip_TIMER_MatchEnableInt(LPC_TIMER0, 1);
@@ -148,6 +199,11 @@ int main(void) {
 	NVIC_EnableIRQ(TIMER0_IRQn);
 
 
+
+
+
+
+
     // TODO: insert code here
     Board_LED_Set(0, true);
     Board_LED_Set(1, true);
@@ -156,51 +212,53 @@ int main(void) {
     // setup external interrupt for receiver
     // setup switch to test external interrupt
     //Chip_GPIO_SetPinDIRInput(LPC_GPIO, TEST_SWITCH_PORT, TEST_SWITCH_PIN);
-    /*
-    while(1){
-    	if(Chip_GPIO_ReadPortBit(LPC_GPIO, TEST_SWITCH_PORT, TEST_SWITCH_PIN)){
-    		EINT3_IRQHandler();
-    	}
-    }
-    */
-    int counter=10000;
-	printf("start the sending loop\n");
+
+	/* Configure the GPIO interrupt */
+	//Chip_GPIOINT_SetIntFalling(LPC_GPIOINT, RX_PORT, 1 << RX_PIN);
+//	Chip_GPIOINT_SetIntRising(LPC_GPIOINT, RX_PORT, 1 << RX_PIN);
+//
+//	//Chip_GPIOINT_SetIntFalling(LPC_GPIOINT, TEST_SWITCH_PORT, 1 << TEST_SWITCH_PIN);
+//	//Chip_GPIOINT_SetIntRising(LPC_GPIOINT, TEST_SWITCH_PORT, 1 << TEST_SWITCH_PIN);
+//	/* Enable interrupt in the NVIC */
+//	NVIC_ClearPendingIRQ(EINT3_IRQn);
+//	NVIC_EnableIRQ(EINT3_IRQn);
+
+
+    int counter=10000000;
+	printf("STARTING SEND/RECEIVE LOOP\n");
 	while(1) {
-		printf("loop cycle: %d\n", counter);
-		testTransmit();
-		printf("\nTRANSMISSION LINE\n");
-		printTransmissionLine();
-		counter =0;
+		//printf("loop cycle: %d\n", counter);
+//		if (counter % 10000000 == 0) {
+//			printf("hit\n");
+//			testTransmit();
+//		}
+		//printf("\nTRANSMISSION LINE\n");
+		//printTransmissionLine();
 		sendCount++;
 
 		counter++;
 		loopCount++;
 		int32_t index;
-		printf("searching buffer!\n");
+		//printf("searching buffer!\n");
 		//int32_t qs = getQueueSize();
-		//printBuffer(receiverBuffer);
+		//printBufferBinary(receiverBuffer);
+		//printBufferChar(receiverBuffer);
 		index = findPrefix(receiverBuffer);
 		if (index > 0) {
 			printf("\nbitIndex of match %d\n",index);
 			static uint8_t *foundPayload = NULL;;
 			makeSubString(&foundPayload,index, receiverBuffer, 128, 32);
-			printArrayChar(foundPayload, 32);
+			printArrayBin(foundPayload, 32);
 		} else {
 			printf("no match in buffer!\n");
 		}
-		printf("done searching\n");
+		//printf("done searching\n");
 
 		//__WFI();
 
 	}
 
 
-    Chip_GPIOINT_Init(LPC_GPIOINT);
-    Chip_GPIOINT_SetIntFalling(LPC_GPIOINT, GPIOINT_PORT2, (1<<TEST_SWITCH_PIN));
-    Chip_GPIOINT_SetIntRising(LPC_GPIOINT, GPIOINT_PORT2, (1<<TEST_SWITCH_PIN));
-
-    NVIC_ClearPendingIRQ(EINT3_IRQn);
-    NVIC_EnableIRQ(EINT3_IRQn);
 
 
 

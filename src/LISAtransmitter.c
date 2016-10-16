@@ -12,6 +12,9 @@
 
 #define MAX_PACKET_SIZE 64
 
+#define EXTERNAL_GREEN_LED_PORT 2
+#define EXTERNAL_GREEN_LED_PIN 13
+
 uint8_t * createPrefix(uint8_t A5) {
   uint8_t * prefix = (uint8_t*)malloc(16*sizeof(uint8_t));
 
@@ -88,11 +91,11 @@ void pushBit(uint8_t bit) {
   uint32_t byteCount = 0;
 
   if (count == 0) {
-    printf("\nSENT BYTE 0b");
+    //printf("\nSENT BYTE 0b");
     byteCount++;
   }
 
-  printf("%d", bit);
+  //printf("%d", bit);
   push(bit);
   count = (count + 1) % 8;
 }
@@ -104,8 +107,10 @@ uint8_t sendBit() {
   static uint8_t temp;
   temp = (val == 0xff)? 0 : val;
   if(temp) {
+	  Chip_GPIO_SetPinOutHigh(LPC_GPIO, EXTERNAL_GREEN_LED_PORT , EXTERNAL_GREEN_LED_PIN );
 	  Chip_GPIO_SetPinOutHigh(LPC_GPIO, TX_PORT, TX_PIN);
   } else {
+	  Chip_GPIO_SetPinOutLow(LPC_GPIO, EXTERNAL_GREEN_LED_PORT , EXTERNAL_GREEN_LED_PIN );
 	  Chip_GPIO_SetPinOutLow(LPC_GPIO, TX_PORT, TX_PIN);
   }
   pop();

@@ -26,30 +26,30 @@ uint8_t getNext(uint8_t reset) {
       temp = queueTraverser->val;
       queueTraverser = queueTraverser->behind;
     } else {
-      temp = 0xff;
+    	temp = 0xff;
     }
     return temp;
   } else {
-    queueTraverser = front;
+	  queueTraverser = front;
   }
   return 0xff;
 }
 
 void push(uint8_t val) {
-  //printf("pushing\n");
+	//printf("pushing\n");
 	queueSize++;
-  TransmissionItem *tmp = malloc(sizeof(TransmissionItem));
-  tmp->behind = NULL;
-  tmp->val = val;
-  if (back != NULL) {
-    back->behind = tmp;
-    tmp->ahead = back;
-  } else { // if queue is empty
-    tmp->ahead = NULL;
-    front=tmp;
-  }
-  back = tmp;
-  //printf("push\n");
+	TransmissionItem *tmp = malloc(sizeof(TransmissionItem));
+	tmp->behind = NULL;
+	tmp->val = val;
+	if (back != NULL) {
+		back->behind = tmp;
+		tmp->ahead = back;
+	} else { // if queue is empty
+		tmp->ahead = NULL;
+		front=tmp;
+	}
+	back = tmp;
+	//printf("push\n");
 }
 
 
