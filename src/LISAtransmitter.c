@@ -34,7 +34,7 @@ void addToPacket(uint8_t * data, uint32_t dataSize, uint8_t ** packetf, uint32_t
     free(*packetf);
   }
   memcpy(&temp[packetSizef[0]], data, dataSize * sizeof(uint8_t));
-  packetf[0] = temp;
+  *packetf = temp;
   *packetSizef += dataSize;
 }
 

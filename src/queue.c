@@ -2,6 +2,7 @@
 #include "stdlib.h"
 #include "stdio.h"
 
+
 uint8_t getFront() {
   return (front == NULL) ? 0xff : front->val;
 }
@@ -36,6 +37,7 @@ uint8_t getNext(uint8_t reset) {
 
 void push(uint8_t val) {
   //printf("pushing\n");
+	queueSize++;
   TransmissionItem *tmp = malloc(sizeof(TransmissionItem));
   tmp->behind = NULL;
   tmp->val = val;
@@ -56,6 +58,7 @@ void pop() {
     TransmissionItem *tmp = front;
     front = tmp->behind;
     free(tmp);
+    queueSize--;
   } else {
       back = NULL; // no need to deallocate as the first section would already have done that
   }
@@ -71,4 +74,8 @@ void printBinary(uint8_t num) {
     temp &= 0x01;
     printf("%d", temp);
   }
+}
+
+int32_t getQueueSize() {
+	return queueSize;
 }

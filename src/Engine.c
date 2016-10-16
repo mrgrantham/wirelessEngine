@@ -24,8 +24,9 @@
 
 #include <cr_section_macros.h>
 
+ #define TICKRATE0_HZ 10 // 9600 bps
  #define TICKRATE1_HZ 4
- #define TICKRATE2_HZ 9600 // 9600 bps
+ #define TICKRATE2_HZ 100 // 9600 bps
 
  #define BLINKS_PER_SEC 1
  #define BLINK_DELAY (TICKRATE2_HZ/BLINKS_PER_SEC)
@@ -42,68 +43,29 @@
 
 // TODO: insert other definitions and declarations here
 
-uint8_t receiverBuffer[1024];
+uint8_t receiverBuffer[128];
 
 int sendCount=0;
 int loopCount=0;
 
-char *payloadStringReceived;
-uint8_t *packet;
+char *payloadStringReceived="JAMES 6912";
+uint8_t *packet=NULL;
 uint32_t packetSize=0;
-
-LPC_GPIOINT_T GPIOINT_SETUP;
-
 
 void testTransmit() {
 
-	  payloadStringReceived = "JAMES 6912";
 	  char * payloadString = malloc(strlen(payloadStringReceived)+1);
 	  memcpy(payloadString,payloadStringReceived,strlen(payloadStringReceived)+1);
 
 
 	  composePacket(payloadString, &packet, &packetSize);
-	  //printReadyPacket(packet, 64);
+	  printReadyPacket(packet, 64);
 
 	  sendPacket(packet,packetSize);
 	  deletePacket(&packet,&packetSize);
-	  //printTransmissionLine();
 
-	  // recieving side
-	  // printTransmissionLine();
-	  /*
-	  uint8_t aBit = 0;
-	  aBit = readBit();
-	  while (aBit != 0xff) {
-	    sendToBuffer(aBit,receiverBuffer);
-	    aBit = readBit();
-	  }
-
-
-
-
-	  printf("stuff\n");
-	  //printBuffer(receiverBuffer);
-
-	  uint32_t index;
-	  index = findPrefix(receiverBuffer);
-	  printf("\nbitIndex of match %d\n",index);
-	  uint8_t *foundPayload = makeSubString(index, receiverBuffer, 1024, 32);
-	  printArrayChar(foundPayload, 32);
-
-	  findPacket();
-	*/
 }
 
-void talk() {
-	sendBit();
-	printf("talking\n");
-}
-
-void listen() {
-	  sendToBuffer(readBit(),receiverBuffer);
-}
-
-// Transmit and Receive Test
 void TIMER1_IRQHandler(void)
 {
 	static bool On = false;
@@ -117,52 +79,45 @@ void TIMER1_IRQHandler(void)
 
 }
 
-// Receive
-void TIMER2_IRQHandler(void)
+// Transmit and Receive Test
+
+void TIMER0_IRQHandler(void)
 {
-    static bool On = false;
-    uint8_t val = sendBit();
-    //printf("%d",val);
-  if (val) {
 
-   static int counter = 0;
+	if (Chip_TIMER_MatchPending(LPC_TIMER0, 1)) {
+		Chip_TIMER_ClearMatch(LPC_TIMER0, 1);
+	}
+	uint8_t val = sendBit();
+	//printf("%d",val);
 
-   printf("about to talk\n");
-   talk();
-   listen();
-   /*
-   if(On) {
-	   //Chip_GPIO_SetPinOutLow(LPC_GPIO, TX_PORT, TX_PIN);
-	   Chip_GPIO_SetPinOutHigh(LPC_GPIO, TX_PORT, TX_PIN);
+	static int counter = 0;
 
-   } else {
-	   Chip_GPIO_SetPinOutLow(LPC_GPIO, TX_PORT, TX_PIN);
+	// broadcast on antenna
+	sendBit();
+	// listen to receiver
+	sendToBuffer(readBit(),receiverBuffer);
 
-   }
-   */
-   if (counter == BLINK_DELAY) {
-	   Board_LED_Toggle(1);
-	   counter = 0;
-	   On = (bool) !On;
-   } else {
-	   counter++;
-   }
-  }
-  if (Chip_TIMER_MatchPending(LPC_TIMER2, 1)) {
-	  Chip_TIMER_ClearMatch(LPC_TIMER2, 1);
-  }
+	if (counter == BLINK_DELAY) {
+		Board_LED_Toggle(0);
+		Board_LED_Toggle(1);
+		Board_LED_Toggle(2);
+		counter = 0;
+	} else {
+		counter++;
+	}
 
-  //printf("SENDING BITS and RECEIVING BITS\n");
+	//printf("SENDING BITS and RECEIVING BITS\n");
 
 
 }
 
+/*
 void GPIO_IRQ_HANDLER(void) {
 
 	printf("EINT3_IRQHandler Activated\n");
-	Chip_GPIOINT_ClearIntStatus(&GPIOINT_SETUP, GPIOINT_PORT2, TEST_SWITCH_PIN);
+	Chip_GPIOINT_ClearIntStatus(LPC_GPIOINT, GPIOINT_PORT2, TEST_SWITCH_PIN);
 }
-
+*/
 
 int main(void) {
 
@@ -186,6 +141,26 @@ int main(void) {
 
     uint32_t timerFreq;
     // setup timers
+
+	/* Enable timer 1 clock */
+	Chip_TIMER_Init(LPC_TIMER0);
+
+	/* Timer rate is system clock rate */
+	timerFreq = Chip_Clock_GetSystemClockRate();
+
+	/* Timer setup for match and interrupt at TICKRATE_HZ */
+	Chip_TIMER_Reset(LPC_TIMER0);
+	Chip_TIMER_MatchEnableInt(LPC_TIMER0, 1);
+	Chip_TIMER_SetMatch(LPC_TIMER0, 1, (timerFreq / TICKRATE0_HZ));
+	Chip_TIMER_ResetOnMatchEnable(LPC_TIMER0, 1);
+	Chip_TIMER_Enable(LPC_TIMER0);
+
+	/* Enable timer interrupt */
+	NVIC_ClearPendingIRQ(TIMER0_IRQn);
+	NVIC_EnableIRQ(TIMER0_IRQn);
+
+
+
     /*
     Chip_TIMER_Init(LPC_TIMER1);
     timerFreq = Chip_Clock_GetPeripheralClockRate(SYSCTL_PCLK_TIMER1);
@@ -197,6 +172,7 @@ int main(void) {
     NVIC_EnableIRQ(TIMER1_IRQn);
     NVIC_ClearPendingIRQ(TIMER1_IRQn);
     */
+    /*
     Chip_TIMER_Init(LPC_TIMER2);
     timerFreq = Chip_Clock_GetPeripheralClockRate(SYSCTL_PCLK_TIMER2);
     printf("timerFreq: %d\n",timerFreq);
@@ -207,12 +183,17 @@ int main(void) {
     Chip_TIMER_Enable(LPC_TIMER2);
     NVIC_EnableIRQ(TIMER2_IRQn);
     NVIC_ClearPendingIRQ(TIMER2_IRQn);
+	*/
+
 
     // TODO: insert code here
+    Board_LED_Set(0, false);
+    Board_LED_Set(1, false);
+    Board_LED_Set(2, false);
 
     // setup external interrupt for receiver
     // setup switch to test external interrupt
-    Chip_GPIO_SetPinDIRInput(LPC_GPIO, TEST_SWITCH_PORT, TEST_SWITCH_PIN);
+    //Chip_GPIO_SetPinDIRInput(LPC_GPIO, TEST_SWITCH_PORT, TEST_SWITCH_PIN);
     /*
     while(1){
     	if(Chip_GPIO_ReadPortBit(LPC_GPIO, TEST_SWITCH_PORT, TEST_SWITCH_PIN)){
@@ -233,10 +214,11 @@ int main(void) {
 		loopCount++;
 		int32_t index;
 		printf("searching buffer!\n");
+		int32_t qs = getQueueSize();
 		index = findPrefix(receiverBuffer);
 		if (index > 0) {
 			printf("\nbitIndex of match %d\n",index);
-			uint8_t *foundPayload;
+			static uint8_t *foundPayload = NULL;;
 			makeSubString(&foundPayload,index, receiverBuffer, 128, 32);
 			printArrayChar(foundPayload, 32);
 		}
@@ -264,9 +246,7 @@ int main(void) {
     volatile static int i = 0 ;
     // Enter an infinite loop, just incrementing a counter
 
-    Board_LED_Set(0, true);
-    Board_LED_Set(1, true);
-    Board_LED_Set(2, true);
+
 
     printf("&----DONE WITH ENGINE TEST----\n");
     while(1) {

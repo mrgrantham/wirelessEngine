@@ -4,6 +4,8 @@
 
 typedef struct  TransmissionItem TransmissionItem;
 
+static int32_t queueSize = 0;
+
 struct  TransmissionItem{
 
     uint8_t val; //
@@ -21,3 +23,4 @@ uint8_t getNext(uint8_t reset);
 uint8_t getFront();
 uint8_t getBack();
 void printBinary(uint8_t num);
+int32_t getQueueSize();

@@ -17,8 +17,9 @@
 
 uint8_t readBit() {
   // capture bit
-  uint8_t temp =  Chip_GPIO_GetPinState(LPC_GPIO, RX_PORT, RX_PIN);
-  printf("%d",temp);
+  static uint8_t temp;
+  temp =  Chip_GPIO_GetPinState(LPC_GPIO, RX_PORT, RX_PIN);
+  //printf("%d",temp);
   pop();
   return temp;
 }
@@ -63,7 +64,6 @@ int32_t findPrefix(uint8_t *receiverBuffer) {
                                   0x58,0x59,0x5a,0x5b,0x5c,0x5d,0x5e,0x5f,
                                   0xa0,0xa1,0xa2,0xa3,0xa4,0xa5,0xa6,0xa7,
                                   0xa8,0xa9,0xaa,0xab,0xac,0xad,0xae,0xaf};
-  static uint8_t segment[4];
 
   // check every 32 bit sequence in the buffer
   static int bufferBitSize = (RECEIVER_BUFFER_SIZE<<3);
@@ -71,7 +71,7 @@ int32_t findPrefix(uint8_t *receiverBuffer) {
   for(buffIndex = 0; buffIndex < bufferBitSize; buffIndex++) {
       // make segment to test against matchString
       //printf("BUFFER SEG: ");
-      static uint8_t *buffSegment;
+      static uint8_t *buffSegment=NULL;
       makeSubString(&buffSegment,
     	   	   	   buffIndex,
                    receiverBuffer,
@@ -111,7 +111,7 @@ int32_t findPrefix(uint8_t *receiverBuffer) {
             printf("-----MATCH-----\n\n" );
             free(buffSegment);
             printf("buffIndex: %2d matchStringBitSize: %2d\n",buffIndex,matchStringBitSize );
-            return buffIndex + matchStringBitSize; // return exact index in buffer where payload begins
+            return (buffIndex + matchStringBitSize) % bufferBitSize; // return exact index in buffer where payload begins
           }
 
       }
@@ -122,12 +122,12 @@ int32_t findPrefix(uint8_t *receiverBuffer) {
 }
 
 void makeSubString(uint8_t **subString, uint32_t startingDatBitIndex, uint8_t *dataArray, uint32_t dataArraySize, uint32_t subStringSize) {
-	//printf("\nstartingDatBitIndex: %d\n dataArraySize: %d\n subStringSize: %d\n",startingDatBitIndex,dataArraySize,subStringSize );
-	//printf("----subString source array---\n");
-	//printArray(dataArray, dataArraySize);
-
-	(*subString) = realloc((*subString), subStringSize * sizeof(dataArray[0]));
-	memset(*subString, 0, subStringSize * sizeof(dataArray[0]));
+	printf("\nstartingDatBitIndex: %d\n dataArraySize: %d\n subStringSize: %d\n",startingDatBitIndex,dataArraySize,subStringSize );
+	printf("----subString source array---\n");
+	printArray(dataArray, dataArraySize);
+	printf("realloc size: %d",subStringSize * sizeof(dataArray[0]));
+	realloc((*subString), subStringSize * sizeof(dataArray[0]));
+	//memset(*subString, 0, subStringSize * sizeof(dataArray[0]));
 
 	static int32_t dataArrayBitSize;
 	dataArrayBitSize = dataArraySize << 3;
@@ -150,9 +150,9 @@ void makeSubString(uint8_t **subString, uint32_t startingDatBitIndex, uint8_t *d
 		static uint8_t tempStrBit;
 		tempStrBit = dataArray[currDatByteIndex] &
 				(0x01<<currDatBitIndex);
-		(*subString)[currStrByteIndex] |= (currDatBitIndex-currStrBitIndex > 0) ?
-				tempStrBit >> (currDatBitIndex-currStrBitIndex):
-				tempStrBit << (currStrBitIndex-currDatBitIndex);
+		(*subString)[currStrByteIndex] |= (currDatBitIndex > currStrBitIndex) ?
+						(tempStrBit >> (currDatBitIndex-currStrBitIndex)):
+						(tempStrBit << (currStrBitIndex-currDatBitIndex));
 		//printf("bitIndex %2d subString[%3d]: %2x ",bitIndex, currStrByteIndex,subString[currStrByteIndex]);
 		//printBinary(subString[currStrByteIndex]);
 		//printf("\n");
