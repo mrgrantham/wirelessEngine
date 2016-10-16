@@ -51,7 +51,6 @@ void printReadyPacket(uint8_t *packet, int16_t packetSize) {
 void sendPacket(uint8_t *packet, uint32_t packetSize) {
 	if (packet != NULL) {
 		for (uint32_t i = 0; i < packetSize; i++) {
-			//printf("sendPacket i: %d packet[i] = %c\n",i,packet[i]);
 			for (int32_t b = 7; b >= 0; b--) {
 				pushBit((packet[i]>>b) & 0x01);
 			}
@@ -86,14 +85,14 @@ void pushBit(uint8_t bit) {
   // set pin to high or low
   // until that code is ready just do printf
   static uint32_t count = 0;
-  static uint32_t byteCount = 0;
+  uint32_t byteCount = 0;
 
   if (count == 0) {
-    //printf("\n[%d] SENT BYTE 0b", byteCount);
+    printf("\nSENT BYTE 0b");
     byteCount++;
   }
 
-  //printf("%d", bit);
+  printf("%d", bit);
   push(bit);
   count = (count + 1) % 8;
 }

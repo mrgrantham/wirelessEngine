@@ -81,9 +81,9 @@ void TIMER0_IRQHandler(void)
 	static int counter = 0;
 
 	// broadcast on antenna
-	sendBit();
+//	sendBit();
 	// listen to receiver
-	sendToBuffer(readBit(),receiverBuffer);
+	//sendToBuffer(readBit(),receiverBuffer);
 
 	if (counter == BLINK_DELAY) {
 		//Board_LED_Toggle(0);
@@ -168,7 +168,7 @@ int main(void) {
 	while(1) {
 		printf("loop cycle: %d\n", counter);
 		testTransmit();
-		printf("TRANSMISSION LINE\n");
+		printf("\nTRANSMISSION LINE\n");
 		printTransmissionLine();
 		counter =0;
 		sendCount++;
