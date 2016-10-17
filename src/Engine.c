@@ -45,9 +45,10 @@
 
 #define EXTERNAL_GREEN_LED_PORT 2
 #define EXTERNAL_GREEN_LED_PIN 13
-// TODO: insert other include files here
 
-// TODO: insert other definitions and declarations here
+#define TRANSMIT_ENABLED
+#define RECEIVE_ENABLED
+
 
 uint8_t receiverBuffer[128];
 
@@ -85,7 +86,7 @@ void TIMER0_IRQHandler(void)
 	static int counter = 0;
 
 	// broadcast on antenna
-// 	sendBit();
+ 	sendBit();
 	// listen to receiver
 
 	sendToBuffer(readBit(),receiverBuffer);
@@ -224,14 +225,19 @@ int main(void) {
 //	NVIC_EnableIRQ(EINT3_IRQn);
 
 
-    int counter=10000000;
+    int counter=0;
 	printf("STARTING SEND/RECEIVE LOOP\n");
 	while(1) {
+
+#ifdef TRANSMIT_ENABLED
 		//printf("loop cycle: %d\n", counter);
-//		if (counter % 10000000 == 0) {
-//			printf("hit\n");
-//			testTransmit();
-//		}
+		if (counter % 10 == 0) {
+			printf("prepping packet\n");
+			testTransmit();
+			Board_LED_Toggle(1);
+
+		}
+#endif
 		//printf("\nTRANSMISSION LINE\n");
 		//printTransmissionLine();
 		sendCount++;
@@ -243,15 +249,20 @@ int main(void) {
 		//int32_t qs = getQueueSize();
 		//printBufferBinary(receiverBuffer);
 		//printBufferChar(receiverBuffer);
+#ifdef RECEIVE_ENABLED
 		index = findPrefix(receiverBuffer);
 		if (index > 0) {
-			printf("\nbitIndex of match %d\n",index);
+			//printf("\nbitIndex of match %d\n",index);
 			static uint8_t *foundPayload = NULL;;
-			makeSubString(&foundPayload,index, receiverBuffer, 128, 32);
-			printArrayBin(foundPayload, 32);
+			char * payloadCString= makeSubStringChar(&foundPayload,index, receiverBuffer, 128, 32);
+			printf("PAYLOAD: %s\n",payloadCString);
+			//printArrayBin(foundPayload, 32);
+			//printArrayChar(foundPayload, 32);
+
 		} else {
-			printf("no match in buffer!\n");
+			//printf("no match in buffer!\n");
 		}
+#endif
 		//printf("done searching\n");
 
 		//__WFI();
