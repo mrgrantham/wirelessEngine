@@ -200,14 +200,18 @@ void makeSubString(uint8_t **subString, uint32_t startingDatBitIndex, uint8_t *d
 
 char* makeSubStringChar(uint8_t **subString, uint32_t startingDatBitIndex, uint8_t *dataArray, uint32_t dataArraySize, uint32_t subStringSize) {
 	makeSubString(subString, startingDatBitIndex,dataArray, dataArraySize, subStringSize);
-	if(subString[subStringSize-1] == '\0') {
-		char * temp = malloc(subStringSize + 1);
-		memcpy(temp,subString,subStringSize);
-		free(subString);
+	char * temp;
+	if(subString[subStringSize-1] != '\0') {
+		temp = malloc(subStringSize + 1);
+		//free(*subString);
 		temp[subStringSize] = '\0';
-		subString = temp;
+		//*subString = temp;
+	} else {
+		temp = malloc(subStringSize + 1);
 	}
-	return (char*)subString;
+	memcpy(temp,*subString,subStringSize);
+
+	return (char*)temp;
 
 }
 

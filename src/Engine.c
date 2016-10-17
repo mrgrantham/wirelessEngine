@@ -24,7 +24,7 @@
 
 #include <cr_section_macros.h>
 
- #define TICKRATE0_HZ 200 // 200 bps
+ #define TICKRATE0_HZ 400 // 200 bps
 #define TICKRATE1_HZ 20
  #define TICKRATE2_HZ 200 // 9600 bps
 
@@ -40,17 +40,18 @@
 #define TEST_SWITCH_PORT 2
 #define TEST_SWITCH_PIN 10
 
-//#define GPIO_IRQ_HANDLER  			GPIO_IRQHandler/* GPIO interrupt IRQ function name */
-
-
 #define EXTERNAL_GREEN_LED_PORT 2
 #define EXTERNAL_GREEN_LED_PIN 13
+
+#define RECEIVER_BUFFER_SIZE 128
 
 #define TRANSMIT_ENABLED
 #define RECEIVE_ENABLED
 
 
-uint8_t receiverBuffer[128];
+uint8_t receiverBuffer[RECEIVER_BUFFER_SIZE];
+static uint16_t packetCheckCounter = 0; // used to determine if enough bits have been received to check the buffer again
+
 
 int sendCount=0;
 int loopCount=0;
@@ -90,42 +91,16 @@ void TIMER0_IRQHandler(void)
 	// listen to receiver
 
 	sendToBuffer(readBit(),receiverBuffer);
+	packetCheckCounter = (packetCheckCounter+1)%(RECEIVER_BUFFER_SIZE<<3);
 
 	if (counter == BLINK_DELAY) {
-		//Board_LED_Toggle(0);
-		//Board_LED_Toggle(1);
 		Board_LED_Toggle(2);
 		counter = 0;
 	} else {
 		counter++;
 	}
 
-	//printf("SENDING BITS and RECEIVING BITS\n");
-
-
 }
-/*
-void TIMER2_IRQHandler(void){
-
-	if (Chip_TIMER_MatchPending(LPC_TIMER2, 1)) {
-		Chip_TIMER_ClearMatch(LPC_TIMER2, 1);
-	}
-	// listen to receiver
-	sendToBuffer(readBit(),receiverBuffer);
-	printf("listening\n");
-
-	static int counter = 0;
-
-	if (counter == BLINK_DELAY) {
-		Board_LED_Toggle(0);
-
-		counter = 0;
-	} else {
-		counter++;
-	}
-}
-
-*/
 
 void EINT3_IRQHandler(void) {
 	static uint32_t counter=10;
@@ -197,76 +172,53 @@ int main(void) {
 
 	/* Enable timer interrupt */
 	NVIC_ClearPendingIRQ(TIMER0_IRQn);
-	NVIC_EnableIRQ(TIMER0_IRQn);
-
-
-
-
-
-
-
-    // TODO: insert code here
-    Board_LED_Set(0, true);
-    Board_LED_Set(1, true);
-    Board_LED_Set(2, true);
-
-    // setup external interrupt for receiver
-    // setup switch to test external interrupt
-    //Chip_GPIO_SetPinDIRInput(LPC_GPIO, TEST_SWITCH_PORT, TEST_SWITCH_PIN);
-
-	/* Configure the GPIO interrupt */
-	//Chip_GPIOINT_SetIntFalling(LPC_GPIOINT, RX_PORT, 1 << RX_PIN);
-//	Chip_GPIOINT_SetIntRising(LPC_GPIOINT, RX_PORT, 1 << RX_PIN);
-//
-//	//Chip_GPIOINT_SetIntFalling(LPC_GPIOINT, TEST_SWITCH_PORT, 1 << TEST_SWITCH_PIN);
-//	//Chip_GPIOINT_SetIntRising(LPC_GPIOINT, TEST_SWITCH_PORT, 1 << TEST_SWITCH_PIN);
-//	/* Enable interrupt in the NVIC */
-//	NVIC_ClearPendingIRQ(EINT3_IRQn);
-//	NVIC_EnableIRQ(EINT3_IRQn);
-
 
     int counter=0;
 	printf("STARTING SEND/RECEIVE LOOP\n");
+	int first = 1;
 	while(1) {
 
 #ifdef TRANSMIT_ENABLED
-		//printf("loop cycle: %d\n", counter);
-		if (counter % 10 == 0) {
+		static uint8_t switch_state;
+		switch_state =  Chip_GPIO_GetPinState(LPC_GPIO, TEST_SWITCH_PORT, TEST_SWITCH_PIN);
+		static uint8_t transmit_locked;
+		if(!switch_state) {
+			transmit_locked = false;
+			Board_LED_Set(1,true);
+		}
+		if (switch_state && !transmit_locked) {
 			printf("prepping packet\n");
 			testTransmit();
-			Board_LED_Toggle(1);
+			transmit_locked = true;
+			Board_LED_Set(1,false);
 
 		}
+		if(first){
+			NVIC_EnableIRQ(TIMER0_IRQn);
+			first =0;
+		}
 #endif
-		//printf("\nTRANSMISSION LINE\n");
-		//printTransmissionLine();
-		sendCount++;
 
+		sendCount++;
 		counter++;
 		loopCount++;
-		int32_t index;
-		//printf("searching buffer!\n");
-		//int32_t qs = getQueueSize();
-		//printBufferBinary(receiverBuffer);
-		//printBufferChar(receiverBuffer);
+		int32_t index = -1;
+
 #ifdef RECEIVE_ENABLED
-		index = findPrefix(receiverBuffer);
+		if(packetCheckCounter==0) {
+			index = findPrefix(receiverBuffer);
+		}
 		if (index > 0) {
-			//printf("\nbitIndex of match %d\n",index);
 			static uint8_t *foundPayload = NULL;;
 			char * payloadCString= makeSubStringChar(&foundPayload,index, receiverBuffer, 128, 32);
 			printf("PAYLOAD: %s\n",payloadCString);
-			//printArrayBin(foundPayload, 32);
-			//printArrayChar(foundPayload, 32);
+			free(payloadCString);
 
 		} else {
 			//printf("no match in buffer!\n");
 		}
 #endif
 		//printf("done searching\n");
-
-		//__WFI();
-
 	}
 
 
