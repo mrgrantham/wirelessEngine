@@ -1,0 +1,9 @@
+README
+
+------------
+----TODO----
+------------
+
+* Empty Buffer on Valid Packet Found
+* Start on external interrupt and read until valid packet found
+* ???

@@ -4,7 +4,12 @@
 
 
 uint8_t getFront() {
-  return (front == NULL) ? 0xff : front->val;
+	if (front == NULL) {
+
+		return 0xff;
+	} else {
+		return front->val;
+	}
 }
 
 uint8_t getBack() {
@@ -75,6 +80,21 @@ void printBinary(uint8_t num) {
     printf("%d", temp);
   }
 }
+
+void printBinaryWPointer(uint8_t num,int32_t index) {
+    printBinary(num);
+    printf("\n");
+
+    if(index < 8) {
+        for (int i = 0 ; i < 7-index; i++) {
+            printf(" ");
+        }
+        printf("^\n");
+    } else {
+        printf("index: %d exceeds limit\n",index);
+    }
+}
+
 
 int32_t getQueueSize() {
 	return queueSize;

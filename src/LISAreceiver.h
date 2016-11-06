@@ -4,6 +4,7 @@ uint8_t readBit();
 void printTransmissionLine();
 void sendToBuffer(uint8_t aByte,uint8_t *receiverBuffer);
 void findPacket();
+uint32_t bufferIndexChanged();
 void printBuffer(uint8_t *receiverBuffer);
 void printBufferChar(uint8_t *receiverBuffer);
 int32_t findPrefix(uint8_t *receiverBuffer);

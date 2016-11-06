@@ -113,7 +113,9 @@ uint8_t sendBit() {
 	  Chip_GPIO_SetPinOutLow(LPC_GPIO, EXTERNAL_GREEN_LED_PORT , EXTERNAL_GREEN_LED_PIN );
 	  Chip_GPIO_SetPinOutLow(LPC_GPIO, TX_PORT, TX_PIN);
   }
-  pop();
+  if (getQueueSize() > 0) {
+	  pop();
+  }
   return temp;
 }
 

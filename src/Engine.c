@@ -24,7 +24,7 @@
 
 #include <cr_section_macros.h>
 
- #define TICKRATE0_HZ 400 // 200 bps
+ #define TICKRATE0_HZ 2000 // 200 bps
 #define TICKRATE1_HZ 20
  #define TICKRATE2_HZ 200 // 9600 bps
 
@@ -91,7 +91,7 @@ void TIMER0_IRQHandler(void)
 	// listen to receiver
 
 	sendToBuffer(readBit(),receiverBuffer);
-	packetCheckCounter = (packetCheckCounter+1)%(RECEIVER_BUFFER_SIZE<<3);
+	packetCheckCounter = (packetCheckCounter+1)%(RECEIVER_BUFFER_SIZE<<2);
 
 	if (counter == BLINK_DELAY) {
 		Board_LED_Toggle(2);
@@ -133,6 +133,7 @@ void EINT3_IRQHandler(void) {
 }
 
 
+
 int main(void) {
 
 #if defined (__USE_LPCOPEN)
@@ -172,22 +173,27 @@ int main(void) {
 
 	/* Enable timer interrupt */
 	NVIC_ClearPendingIRQ(TIMER0_IRQn);
+	NVIC_EnableIRQ(TIMER0_IRQn);
 
     int counter=0;
 	printf("STARTING SEND/RECEIVE LOOP\n");
 	int first = 1;
+
 	while(1) {
 
 #ifdef TRANSMIT_ENABLED
 		static uint8_t switch_state;
 		switch_state =  Chip_GPIO_GetPinState(LPC_GPIO, TEST_SWITCH_PORT, TEST_SWITCH_PIN);
 		static uint8_t transmit_locked;
-		if(!switch_state) {
+		if(counter % 100000 == 0) {
 			transmit_locked = false;
 			Board_LED_Set(1,true);
 		}
-		if (switch_state && !transmit_locked) {
-			printf("prepping packet\n");
+		//if (switch_state && !transmit_locked) {
+		if (getQueueSize() < 128) { // wait until the queue size is almost empty
+			//printf("prepping packet\n");
+//			testTransmit();
+//			testTransmit();
 			testTransmit();
 			transmit_locked = true;
 			Board_LED_Set(1,false);
@@ -206,12 +212,14 @@ int main(void) {
 
 #ifdef RECEIVE_ENABLED
 		if(packetCheckCounter==0) {
-			index = findPrefix(receiverBuffer);
+			if(bufferIndexChanged()) {
+				index = findPrefix(receiverBuffer);
+			}
 		}
 		if (index > 0) {
 			static uint8_t *foundPayload = NULL;;
 			char * payloadCString= makeSubStringChar(&foundPayload,index, receiverBuffer, 128, 32);
-			printf("PAYLOAD: %s\n",payloadCString);
+			printf("INDEX: %d\tPAYLOAD: %s\n",index,payloadCString);
 			free(payloadCString);
 
 		} else {
