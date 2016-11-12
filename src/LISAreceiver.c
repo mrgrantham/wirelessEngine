@@ -7,7 +7,7 @@
 #include "stdlib.h"
 #define MAX_PACKET_SIZE 64 // in bytes
 #define RECEIVER_BUFFER_SIZE 128 // in bytes
-#define SEGMENT_SIZE 6 // in bytes
+#define SEGMENT_SIZE 8 // in bytes
 #define PREFIX_SIZE 32 // in bytes
 
 #define RX_PORT 0
@@ -304,48 +304,22 @@ void makeSubString(uint8_t **subString, uint32_t startingDatBitIndex, uint8_t *d
             int32_t i;
             i = 7;
         }
-//        tempStrBit = (dataArray[currDatByteIndex] >> currDatBitIndex) & 0x1;
-//
-//        (*subString)[currStrByteIndex] |= (currDatBitIndex >= currStrBitIndex) ?
-//        (tempStrBit >> (currDatBitIndex-currStrBitIndex)):
-//        (tempStrBit << (currStrBitIndex-currDatBitIndex));
-
-//        printBufferBinary(dataArray);
-//        printf("\n");
-//        printf("----BUFFER BYTE----\n");
-//        printBinaryWPointer(dataArray[currDatByteIndex], currDatBitIndex);
-//        printf("\n----STRING BYTE----\n");
-//        printBinaryWPointer((*subString)[currStrByteIndex], currStrBitIndex);
-//        printf("\n");
-//        printf("\n");
-//
-//        printArrayBin(*subString, subStringSize);
-
-
-
-       // printf("\n");
-        //printf("bitIndex %2d subString[%3d]: %2x ",bitIndex, currStrByteIndex,subString[currStrByteIndex]);
-        //printBinary(subString[currStrByteIndex]);
-        //printf("\n");
-
     }
-    //printf("----subString array---\n");
-    //printArray(subString, subStringSize);
-
 }
 
-char* makeSubStringChar(uint8_t **subString, uint32_t startingDatBitIndex, uint8_t *dataArray, uint32_t dataArraySize, uint32_t subStringSize) {
-	makeSubString(subString, startingDatBitIndex,dataArray, dataArraySize, subStringSize);
+char* makeSubStringChar(uint32_t startingDatBitIndex, uint8_t *dataArray, uint32_t dataArraySize, uint32_t subStringSize) {
+	static uint8_t *subString;
+	makeSubString(&subString, startingDatBitIndex,dataArray, dataArraySize, subStringSize);
 	char * temp;
+	temp = malloc(subStringSize + 1);
 	if(subString[subStringSize-1] != '\0') {
-		temp = malloc(subStringSize + 1);
 		//free(*subString);
 		temp[subStringSize] = '\0';
 		//*subString = temp;
 	} else {
 		temp = malloc(subStringSize + 1);
 	}
-	memcpy(temp,*subString,subStringSize);
+	memcpy(temp,subString,subStringSize);
 
 	return (char*)temp;
 
@@ -365,9 +339,29 @@ void printArrayChar(uint8_t *data, uint32_t dataSize) {
 }
 
 void printArrayBin(uint8_t *data, uint32_t dataSize) {
-  printf("ARRAY: ");
-   for (int i = 0; i < dataSize; i++) {
-	   printBinary(data[i]);
-     printf(" ");
-   }
+//    printf("ARRAY: ");
+    static int32_t row = 1;
+    row = 1;
+    for (int i = 0; i < dataSize; i++) {
+        printBinary(data[i]);
+        printf(" ");
+        if (row == 0) {
+            printf("\n");
+        }
+        row = (row +1) % 8;
+    }
+}
+
+void printArrayBinMSB(uint8_t *data, uint32_t dataSize) {
+    //    printf("ARRAY: ");
+    static int32_t row = 1;
+    row = 1;
+    for (int i = dataSize-1; i >= 0; i--) {
+        printBinary(data[i]);
+        printf(" ");
+        if (row == 0) {
+            printf("\n");
+        }
+        row = (row +1) % 8;
+    }
 }

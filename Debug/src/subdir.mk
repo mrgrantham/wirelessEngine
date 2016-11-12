@@ -10,6 +10,7 @@ C_SRCS += \
 ../src/cr_startup_lpc175x_6x.c \
 ../src/crp.c \
 ../src/queue.c \
+../src/scrambler.c \
 ../src/sysinit.c 
 
 OBJS += \
@@ -19,6 +20,7 @@ OBJS += \
 ./src/cr_startup_lpc175x_6x.o \
 ./src/crp.o \
 ./src/queue.o \
+./src/scrambler.o \
 ./src/sysinit.o 
 
 C_DEPS += \
@@ -28,6 +30,7 @@ C_DEPS += \
 ./src/cr_startup_lpc175x_6x.d \
 ./src/crp.d \
 ./src/queue.d \
+./src/scrambler.d \
 ./src/sysinit.d 
 
 

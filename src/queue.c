@@ -71,7 +71,7 @@ void pop() {
 }
 
 void printBinary(uint8_t num) {
-  printf("0b");
+  //printf("0b");
   uint8_t temp = 0;
   for (int8_t i=7;i>=0;i--) {
     temp=num;

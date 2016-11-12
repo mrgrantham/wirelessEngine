@@ -16,15 +16,20 @@
 #endif
 #endif
 
+//#include "scrambler.h"
+
 #include "queue.h"
 #include "LISAtransmitter.h"
 #include "LISAreceiver.h"
 #include "stdlib.h"
 #include "string.h"
 
+
 #include <cr_section_macros.h>
 
- #define TICKRATE0_HZ 2000 // 200 bps
+#define SCRAMBLER_ORDER 7
+
+ #define TICKRATE0_HZ 500 // 200 bps
 #define TICKRATE1_HZ 20
  #define TICKRATE2_HZ 200 // 9600 bps
 
@@ -47,7 +52,7 @@
 
 #define TRANSMIT_ENABLED
 #define RECEIVE_ENABLED
-
+#define SCRAMBLE_ENABLED
 
 uint8_t receiverBuffer[RECEIVER_BUFFER_SIZE];
 static uint16_t packetCheckCounter = 0; // used to determine if enough bits have been received to check the buffer again
@@ -56,22 +61,44 @@ static uint16_t packetCheckCounter = 0; // used to determine if enough bits have
 int sendCount=0;
 int loopCount=0;
 
-char *payloadStringReceived="JAMES 6912";
+//char *payloadString="JAMES 6912";
+char *payloadString="JAJAMES6912";
+
 uint8_t *packet=NULL;
 uint32_t packetSize=0;
 
+int firstscram = 1;
+
 void testTransmit() {
 
-	  char * payloadString = malloc(strlen(payloadStringReceived)+1);
-	  memcpy(payloadString,payloadStringReceived,strlen(payloadStringReceived)+1);
+
+#ifdef SCRAMBLE_ENABLED
+
+	scrambleShiftRegisterReset();
+
+	char * payloadStringScrambled = malloc(strlen(payloadString)+1);
+	memcpy(payloadStringScrambled,payloadString,strlen(payloadString)+1);
+
+	scramble(payloadStringScrambled, payloadString, strlen(payloadString)+1);
+//	printf("%s\n",payloadString);
+	if (firstscram) {
+		printf("SCRAM: %s\n",payloadStringScrambled);
+		printf("SCRAM BIN: ");
+		printArrayBin(payloadStringScrambled,11);
+		printf("\n");
+		firstscram = 0;
+	}
+	composePacket(payloadStringScrambled, &packet, &packetSize);
+	//printReadyPacket(packet, 64);
+	free(payloadStringScrambled);
+
+#else
+	composePacket(payloadString, &packet, &packetSize);
+#endif
 
 
-	  composePacket(payloadString, &packet, &packetSize);
-	  //printReadyPacket(packet, 64);
-
-	  sendPacket(packet,packetSize);
-	  deletePacket(&packet,&packetSize);
-
+	sendPacket(packet,packetSize);
+	deletePacket(&packet,&packetSize);
 }
 
 // Transmit and Receive Test
@@ -132,6 +159,10 @@ void EINT3_IRQHandler(void) {
     counter++;
 }
 
+void resetBuffer() {
+	memset(receiverBuffer, 0,RECEIVER_BUFFER_SIZE);
+}
+
 
 
 int main(void) {
@@ -154,6 +185,10 @@ int main(void) {
 
     Chip_GPIO_SetPinDIROutput(LPC_GPIO, EXTERNAL_GREEN_LED_PORT, EXTERNAL_GREEN_LED_PIN);
 
+    scrambleShiftRegisterInit(SCRAMBLER_ORDER,0);
+    descrambleShiftRegisterInit(SCRAMBLER_ORDER,0);
+
+
 
     uint32_t timerFreq;
     // setup timers
@@ -175,9 +210,9 @@ int main(void) {
 	NVIC_ClearPendingIRQ(TIMER0_IRQn);
 	NVIC_EnableIRQ(TIMER0_IRQn);
 
-    int counter=0;
+	int32_t counter=0;
 	printf("STARTING SEND/RECEIVE LOOP\n");
-	int first = 1;
+	int32_t first = 1;
 
 	while(1) {
 
@@ -217,10 +252,30 @@ int main(void) {
 			}
 		}
 		if (index > 0) {
-			static uint8_t *foundPayload = NULL;;
-			char * payloadCString= makeSubStringChar(&foundPayload,index, receiverBuffer, 128, 32);
+			//static uint8_t *foundPayload = NULL;
+#ifdef SCRAMBLE_ENABLED
+			uint8_t *scrambledString;
+			makeSubString(&scrambledString,index, receiverBuffer, RECEIVER_BUFFER_SIZE, 32);
+			resetBuffer();
+			uint8_t *descrambledString = malloc(32 * sizeof(uint8_t));
+			//printArrayBin(descrambledString, 32);
+		    descrambleShiftRegisterReset();
+			descramble(descrambledString,scrambledString,32);
+			//printArrayBin(descrambledString, 32);
+			char * payloadCString = makeSubStringChar(0, descrambledString, RECEIVER_BUFFER_SIZE, 32);
+
+//			printf("INDEX: %d\t  SCRAM PAYLOAD: %s\n",index,scrambledString);
+//			printArrayBin(scrambledString,10);
+			printf("INDEX: %d\tDESCRAM PAYLOAD: %s\n",index,descrambledString);
+			free(descrambledString);
+			free(scrambledString);
+#else
+			char * payloadCString= makeSubStringChar(index, receiverBuffer, 128, 32);
+			resetBuffer();
 			printf("INDEX: %d\tPAYLOAD: %s\n",index,payloadCString);
-			free(payloadCString);
+
+#endif
+			//free(payloadCString);
 
 		} else {
 			//printf("no match in buffer!\n");
@@ -229,26 +284,8 @@ int main(void) {
 		//printf("done searching\n");
 	}
 
-
-
-
-
-
-
-
-
-    // Force the counter to be placed into memory
-    volatile static int i = 0 ;
-    // Enter an infinite loop, just incrementing a counter
-
-
-
     printf("&----DONE WITH ENGINE TEST----\n");
-    while(1) {
-        __WFI();
-  //  	printf("hello\n");
-        i++ ;
-    }
+
     return 0 ;
 }
 
