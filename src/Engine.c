@@ -29,7 +29,7 @@
 
 #define SCRAMBLER_ORDER 7
 
- #define TICKRATE0_HZ 1000 // 200 bps
+ #define TICKRATE0_HZ 2000 // 200 bps
 #define TICKRATE1_HZ 20
  #define TICKRATE2_HZ 200 // 9600 bps
 
@@ -54,6 +54,8 @@
 #define TRANSMIT_ENABLED
 #define RECEIVE_ENABLED
 #define SCRAMBLE_ENABLED
+#define SWITCH_TRANSMIT_ENABLED
+#define ACK_MODE_ENABLED
 
 uint8_t receiverBuffer[RECEIVER_BUFFER_SIZE];
 static uint16_t packetCheckCounter = 0; // used to determine if enough bits have been received to check the buffer again
@@ -103,6 +105,8 @@ void testTransmit() {
 }
 
 // Transmit and Receive Test
+static int32_t receive_enabled = 1;
+static int32_t transmit_enabled = 0;
 
 void TIMER0_IRQHandler(void)
 {
@@ -115,10 +119,25 @@ void TIMER0_IRQHandler(void)
 	static int counter = 0;
 
 	// broadcast on antenna
- 	sendBit();
-	// listen to receiver
+#ifdef ACK_MODE_ENABLED
+	if(!receive_enabled && transmit_enabled) {
+		sendBit();
+		if (getQueueSize() == 0) {
+			receive_enabled = 1;
+			transmit_enabled = 0;
+		}
+	}
+	if(receive_enabled && !transmit_enabled) {
+		sendToBuffer(readBit(),receiverBuffer);
+	}
+
+#else
+	sendBit();
 
 	sendToBuffer(readBit(),receiverBuffer);
+#endif
+	// listen to receiver
+
 	packetCheckCounter = (packetCheckCounter+1)%(RECEIVER_BUFFER_SIZE<<2);
 
 	if (counter == BLINK_DELAY) {
@@ -184,6 +203,9 @@ int main(void) {
     Chip_GPIO_SetPinDIRInput(LPC_GPIO, RX_PORT, RX_PIN);
     Chip_GPIO_SetPinDIROutput(LPC_GPIO, TX_PORT, TX_PIN);
 
+    Chip_GPIO_SetPinDIRInput(LPC_GPIO, TEST_SWITCH_PORT, TEST_SWITCH_PIN);
+
+
     Chip_GPIO_SetPinDIROutput(LPC_GPIO, EXTERNAL_GREEN_LED_PORT, EXTERNAL_GREEN_LED_PIN);
 
     scrambleShiftRegisterInit(SCRAMBLER_ORDER,0);
@@ -214,24 +236,40 @@ int main(void) {
 	int32_t counter=0;
 	printf("STARTING SEND/RECEIVE LOOP\n");
 	int32_t first = 1;
+	int32_t transmit_toggle = 1;
 
 	while(1) {
 
 #ifdef TRANSMIT_ENABLED
 		static uint8_t switch_state;
 		switch_state =  Chip_GPIO_GetPinState(LPC_GPIO, TEST_SWITCH_PORT, TEST_SWITCH_PIN);
-		static uint8_t transmit_locked;
 		if(counter % 100000 == 0) {
-			transmit_locked = false;
-			Board_LED_Toggle(1);
+			//Board_LED_Toggle(1);
 		}
+
+
+
 		static int32_t currQueueSize;
 		currQueueSize = getQueueSize();
-		if (currQueueSize < 128) { // wait until the queue size is almost empty
-			testTransmit();
-			transmit_locked = true;
-			Board_LED_Set(1,false);
+		if (currQueueSize == 0) { // wait until the queue size is almost empty
 
+#ifdef SWITCH_TRANSMIT_ENABLED
+
+			if(switch_state && transmit_toggle) {
+				testTransmit();
+				transmit_toggle = 0;
+				transmit_enabled = 1;
+				receive_enabled = 0;
+				Board_LED_Set(1,true);
+
+			}else if (switch_state == 0){
+				transmit_toggle = 1;
+				Board_LED_Set(1,false);
+
+			}
+#else
+			testTransmit();
+#endif
 		}
 		if(first){
 			NVIC_EnableIRQ(TIMER0_IRQn);
@@ -261,12 +299,27 @@ int main(void) {
 			memset(descrambledString,0,PAYLOAD_SIZE * sizeof(uint8_t));
 			//printArrayBin(descrambledString, 32);
 		    descrambleShiftRegisterReset();
-			descramble(descrambledString,scrambledString,PAYLOAD_SIZE);
+		    int endOfStringIndex;
+		    for (int i =0; i < PAYLOAD_SIZE;i++) {
+		    	if (scrambledString[i] == '\n') {
+		    		endOfStringIndex = i;
+		    		break;
+		    	}
+		    }
+		    memset(scrambledString + endOfStringIndex,0,PAYLOAD_SIZE-endOfStringIndex-1);
+			descramble(descrambledString,scrambledString,endOfStringIndex+1);
 			//printArrayBin(descrambledString, 32);
 			char * payloadCString = makeSubStringChar(0, descrambledString, RECEIVER_BUFFER_SIZE, PAYLOAD_SIZE);
 
-			printf("INDEX: %d\t  SCRAM PAYLOAD: %s\n",index,scrambledString);
+//			printf("INDEX: %d\t  SCRAM PAYLOAD: %s\n",index,scrambledString);
 //			printArrayBin(scrambledString,10);
+#ifdef ACK_MODE_ENABLED
+
+			testTransmit();
+			transmit_enabled = 1;
+			receive_enabled = 0;
+
+#endif
 			printf("INDEX: %d\tDESCRAM PAYLOAD: %s\n",index,descrambledString);
 #else
 			char * payloadCString= makeSubStringChar(index, receiverBuffer, RECEIVER_BUFFER_SIZE, PAYLOAD_SIZE);
