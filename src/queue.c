@@ -61,12 +61,20 @@ void push(uint8_t val) {
 void pop() {
   if (front != NULL) {
     TransmissionItem *tmp = front;
-    front = tmp->behind;
-    free(tmp);
-    queueSize--;
-  } else {
-      back = NULL; // no need to deallocate as the first section would already have done that
+    if (front == back) {
+    	back = NULL;
+    	free(front);
+    	front = NULL;
+    } else {
+        front = tmp->behind;
+        free(tmp);
+    }
+
   }
+  if(queueSize != 0) {
+	  queueSize--;
+  }
+
   //printf("pop\n");
 }
 

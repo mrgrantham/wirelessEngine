@@ -8,7 +8,7 @@ uint32_t bufferIndexChanged();
 void printBuffer(uint8_t *receiverBuffer);
 void printBufferChar(uint8_t *receiverBuffer);
 int32_t findPrefix(uint8_t *receiverBuffer);
-void makeSubString(uint8_t **subString,
+void makeSubString(uint8_t *subString,
 						uint32_t startingSubStringBitIndex,
                         uint8_t *dataArray,
                         uint32_t dataArraySize,

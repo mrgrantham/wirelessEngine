@@ -29,7 +29,7 @@
 
 #define SCRAMBLER_ORDER 7
 
- #define TICKRATE0_HZ 500 // 200 bps
+ #define TICKRATE0_HZ 1000 // 200 bps
 #define TICKRATE1_HZ 20
  #define TICKRATE2_HZ 200 // 9600 bps
 
@@ -49,6 +49,7 @@
 #define EXTERNAL_GREEN_LED_PIN 13
 
 #define RECEIVER_BUFFER_SIZE 128
+#define PAYLOAD_SIZE 32
 
 #define TRANSMIT_ENABLED
 #define RECEIVE_ENABLED
@@ -76,16 +77,16 @@ void testTransmit() {
 
 	scrambleShiftRegisterReset();
 
-	char * payloadStringScrambled = malloc(strlen(payloadString)+1);
-	memcpy(payloadStringScrambled,payloadString,strlen(payloadString)+1);
+	char * payloadStringScrambled = malloc((strlen(payloadString)+1) * sizeof(char));
+	memset(payloadStringScrambled,0,(strlen(payloadString)+1) * sizeof(char));
 
 	scramble(payloadStringScrambled, payloadString, strlen(payloadString)+1);
 //	printf("%s\n",payloadString);
 	if (firstscram) {
 		printf("SCRAM: %s\n",payloadStringScrambled);
-		printf("SCRAM BIN: ");
-		printArrayBin(payloadStringScrambled,11);
-		printf("\n");
+//		printf("SCRAM BIN: ");
+//		printArrayBin(payloadStringScrambled,11);
+//		printf("\n");
 		firstscram = 0;
 	}
 	composePacket(payloadStringScrambled, &packet, &packetSize);
@@ -222,13 +223,11 @@ int main(void) {
 		static uint8_t transmit_locked;
 		if(counter % 100000 == 0) {
 			transmit_locked = false;
-			Board_LED_Set(1,true);
+			Board_LED_Toggle(1);
 		}
-		//if (switch_state && !transmit_locked) {
-		if (getQueueSize() < 128) { // wait until the queue size is almost empty
-			//printf("prepping packet\n");
-//			testTransmit();
-//			testTransmit();
+		static int32_t currQueueSize;
+		currQueueSize = getQueueSize();
+		if (currQueueSize < 128) { // wait until the queue size is almost empty
 			testTransmit();
 			transmit_locked = true;
 			Board_LED_Set(1,false);
@@ -252,30 +251,30 @@ int main(void) {
 			}
 		}
 		if (index > 0) {
-			//static uint8_t *foundPayload = NULL;
 #ifdef SCRAMBLE_ENABLED
-			uint8_t *scrambledString;
-			makeSubString(&scrambledString,index, receiverBuffer, RECEIVER_BUFFER_SIZE, 32);
+			static uint8_t scrambledString[PAYLOAD_SIZE];
+			memset(scrambledString,0,PAYLOAD_SIZE * sizeof(uint8_t));
+			makeSubString(scrambledString,index, receiverBuffer, RECEIVER_BUFFER_SIZE, PAYLOAD_SIZE);
 			resetBuffer();
-			uint8_t *descrambledString = malloc(32 * sizeof(uint8_t));
+
+			static uint8_t descrambledString[PAYLOAD_SIZE];
+			memset(descrambledString,0,PAYLOAD_SIZE * sizeof(uint8_t));
 			//printArrayBin(descrambledString, 32);
 		    descrambleShiftRegisterReset();
-			descramble(descrambledString,scrambledString,32);
+			descramble(descrambledString,scrambledString,PAYLOAD_SIZE);
 			//printArrayBin(descrambledString, 32);
-			char * payloadCString = makeSubStringChar(0, descrambledString, RECEIVER_BUFFER_SIZE, 32);
+			char * payloadCString = makeSubStringChar(0, descrambledString, RECEIVER_BUFFER_SIZE, PAYLOAD_SIZE);
 
-//			printf("INDEX: %d\t  SCRAM PAYLOAD: %s\n",index,scrambledString);
+			printf("INDEX: %d\t  SCRAM PAYLOAD: %s\n",index,scrambledString);
 //			printArrayBin(scrambledString,10);
 			printf("INDEX: %d\tDESCRAM PAYLOAD: %s\n",index,descrambledString);
-			free(descrambledString);
-			free(scrambledString);
 #else
-			char * payloadCString= makeSubStringChar(index, receiverBuffer, 128, 32);
+			char * payloadCString= makeSubStringChar(index, receiverBuffer, RECEIVER_BUFFER_SIZE, PAYLOAD_SIZE);
 			resetBuffer();
 			printf("INDEX: %d\tPAYLOAD: %s\n",index,payloadCString);
 
 #endif
-			//free(payloadCString);
+			free(payloadCString);
 
 		} else {
 			//printf("no match in buffer!\n");

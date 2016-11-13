@@ -247,13 +247,13 @@ int32_t findPrefix(uint8_t *receiverBuffer) {
 }
 
 
-void makeSubString(uint8_t **subString, uint32_t startingDatBitIndex, uint8_t *dataArray, uint32_t dataArraySize, uint32_t subStringSize) {
+void makeSubString(uint8_t *subString, uint32_t startingDatBitIndex, uint8_t *dataArray, uint32_t dataArraySize, uint32_t subStringSize) {
     //printf("\nstartingDatBitIndex: %d\n dataArraySize: %d\n subStringSize: %d\n",startingDatBitIndex,dataArraySize,subStringSize );
     //printf("----subString source array---\n");
     //printArray(dataArray, dataArraySize);
     //printf("realloc size: %d",subStringSize * sizeof(dataArray[0]));
-    *subString = realloc((*subString), subStringSize * sizeof(dataArray[0]));
-    memset(*subString, 0, subStringSize * sizeof(dataArray[0]));
+//    *subString = realloc((*subString), subStringSize * sizeof(dataArray[0]));
+    //memset(*subString, 0, subStringSize * sizeof(dataArray[0]));
 
     static int32_t dataArrayBitSize;
     dataArrayBitSize = dataArraySize << 3;
@@ -272,9 +272,6 @@ void makeSubString(uint8_t **subString, uint32_t startingDatBitIndex, uint8_t *d
         static int32_t currStrByteIndex;
         static int32_t currStrBitIndex;
 
-
-
-
         currDatByteIndex = ((startingDatBitIndex + bitIndex)%dataArrayBitSize)>>3;
         currDatBitIndex = (startingDatBitIndex + bitIndex) % 8;// % 8;
         currStrByteIndex = bitIndex >> 3;
@@ -286,11 +283,8 @@ void makeSubString(uint8_t **subString, uint32_t startingDatBitIndex, uint8_t *d
         }
 
         // adjust for misaligned bits
-
         if ((currDatBitIndex > 7 - bitDiff)) {
-
             currDatByteIndex += 2;
-
         }
 
         //printf("\ncurrDatByteIndex: %d\ncurrDatBitIndex: %d\ncurrStrByteIndex: %d\ncurrStrBitIndex: %d\n",currDatByteIndex,currDatBitIndex,currStrByteIndex,currStrBitIndex );
@@ -298,7 +292,7 @@ void makeSubString(uint8_t **subString, uint32_t startingDatBitIndex, uint8_t *d
         static uint8_t tempStrBit;
 
         tempStrBit = (dataArray[currDatByteIndex] >> currDatBitIndex) & 0x1;
-        (*subString)[currStrByteIndex] =  (*subString)[currStrByteIndex] | (tempStrBit << currStrBitIndex);
+        subString[currStrByteIndex] =  subString[currStrByteIndex] | (tempStrBit << currStrBitIndex);
 
         if (currStrBitIndex==6 && currDatByteIndex==0) {
             int32_t i;
@@ -308,10 +302,14 @@ void makeSubString(uint8_t **subString, uint32_t startingDatBitIndex, uint8_t *d
 }
 
 char* makeSubStringChar(uint32_t startingDatBitIndex, uint8_t *dataArray, uint32_t dataArraySize, uint32_t subStringSize) {
-	static uint8_t *subString;
-	makeSubString(&subString, startingDatBitIndex,dataArray, dataArraySize, subStringSize);
+	uint8_t *subString;
+	subString = malloc(subStringSize * sizeof(dataArray[0]));
+    memset(subString, 0, subStringSize * sizeof(dataArray[0]));
+	makeSubString(subString, startingDatBitIndex,dataArray, dataArraySize, subStringSize);
 	char * temp;
 	temp = malloc(subStringSize + 1);
+    memset(temp, 0, subStringSize + 1);
+
 	if(subString[subStringSize-1] != '\0') {
 		//free(*subString);
 		temp[subStringSize] = '\0';
@@ -320,7 +318,7 @@ char* makeSubStringChar(uint32_t startingDatBitIndex, uint8_t *dataArray, uint32
 		temp = malloc(subStringSize + 1);
 	}
 	memcpy(temp,subString,subStringSize);
-
+	free(subString);
 	return (char*)temp;
 
 }

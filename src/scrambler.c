@@ -13,6 +13,15 @@
 #include "LISAreceiver.h"
 
 
+void scrambleShiftRegisterReset(){
+	memset(scramblerRegister,0,scramblerRegisterSize);
+
+}
+void descrambleShiftRegisterReset(){
+	memset(descramblerRegister,0,descramblerRegisterSize);
+}
+
+
 void scrambleStep(uint8_t *dest, uint8_t *source,int32_t size, uint8_t reset){
 
     static int32_t bitSize;
@@ -162,6 +171,7 @@ void descrambleStep(uint8_t *dest, uint8_t *source,int32_t size, uint8_t reset){
 
 }
 
+
 void scrambleShiftRegisterInit(int32_t order, uint8_t startingBit){
     scramblerRegister = malloc(((order>>3)+1) * sizeof(scramblerRegister[0]));
     memset(scramblerRegister, startingBit, ((order>>3)+1) * sizeof(scramblerRegister[0]));
@@ -170,16 +180,9 @@ void scrambleShiftRegisterInit(int32_t order, uint8_t startingBit){
     scramblerRegisterBitSize = order;
 }
 
-void scrambleShiftRegisterReset(){
-    memset(scramblerRegister, 0, scramblerRegisterSize * sizeof(scramblerRegister[0]));
-}
-
-void descrambleShiftRegisterReset(){
-    memset(descramblerRegister, 0, descramblerRegisterSize * sizeof(descramblerRegister[0]));
-}
 
 void descrambleShiftRegisterInit(int32_t order, uint8_t startingBit){
-    descramblerRegister = realloc(descramblerRegister, ((order>>3)+1) * sizeof(descramblerRegister[0]));
+    descramblerRegister = malloc(((order>>3)+1) * sizeof(descramblerRegister[0]));
     memset(descramblerRegister, startingBit, ((order>>3)+1) * sizeof(descramblerRegister[0]));
     descramblerRegisterSize = (order>>3)+1;
     descramblerEndBitIndex = order%8;
