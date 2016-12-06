@@ -228,7 +228,4 @@ int32_t getDescramblerRegisterSize(){
     return descramblerRegisterSize;
 }
 
-int8_t getBit(uint8_t source, int8_t index){
-    return (source >> index) & 0x1;
-}
 

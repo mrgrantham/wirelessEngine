@@ -23,11 +23,11 @@
 #include "LISAreceiver.h"
 #include "stdlib.h"
 #include "string.h"
-
+#include "linearBlockCoder.h"
 
 #include <cr_section_macros.h>
 
-#define SCRAMBLER_ORDER 7
+#define SCRAMBLER_ORDER 11
 
  #define TICKRATE0_HZ 2000 // 200 bps
 #define TICKRATE1_HZ 20
@@ -54,8 +54,8 @@
 #define TRANSMIT_ENABLED
 #define RECEIVE_ENABLED
 #define SCRAMBLE_ENABLED
-#define SWITCH_TRANSMIT_ENABLED
-#define ACK_MODE_ENABLED
+//#define SWITCH_TRANSMIT_ENABLED
+//#define ACK_MODE_ENABLED
 
 uint8_t receiverBuffer[RECEIVER_BUFFER_SIZE];
 static uint16_t packetCheckCounter = 0; // used to determine if enough bits have been received to check the buffer again
@@ -91,6 +91,7 @@ void testTransmit() {
 //		printf("\n");
 		firstscram = 0;
 	}
+
 	composePacket(payloadStringScrambled, &packet, &packetSize);
 	//printReadyPacket(packet, 64);
 	free(payloadStringScrambled);
@@ -303,11 +304,12 @@ int main(void) {
 		    for (int i =0; i < PAYLOAD_SIZE;i++) {
 		    	if (scrambledString[i] == '\n') {
 		    		endOfStringIndex = i;
+				    memset(&scrambledString[i],0,PAYLOAD_SIZE-i);
 		    		break;
 		    	}
 		    }
-		    memset(scrambledString + endOfStringIndex,0,PAYLOAD_SIZE-endOfStringIndex-1);
-			descramble(descrambledString,scrambledString,endOfStringIndex+1);
+//		    memset(&scrambledString[endOfStringIndex],0,PAYLOAD_SIZE-endOfStringIndex-1);
+			descramble(descrambledString,scrambledString,endOfStringIndex);
 			//printArrayBin(descrambledString, 32);
 			char * payloadCString = makeSubStringChar(0, descrambledString, RECEIVER_BUFFER_SIZE, PAYLOAD_SIZE);
 
@@ -320,7 +322,9 @@ int main(void) {
 			receive_enabled = 0;
 
 #endif
-			printf("INDEX: %d\tDESCRAM PAYLOAD: %s\n",index,descrambledString);
+			char src = descrambledString[0];
+			char dst = descrambledString[1];
+			printf("INDEX: %d\tDESCRAM SRC: %c DST: %c PAYLOAD: %s\n",index,src,dst,&descrambledString[2]);
 #else
 			char * payloadCString= makeSubStringChar(index, receiverBuffer, RECEIVER_BUFFER_SIZE, PAYLOAD_SIZE);
 			resetBuffer();

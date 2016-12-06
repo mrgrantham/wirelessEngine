@@ -9,6 +9,8 @@ C_SRCS += \
 ../src/LISAtransmitter.c \
 ../src/cr_startup_lpc175x_6x.c \
 ../src/crp.c \
+../src/helperFunctions.c \
+../src/linearBlockCoder.c \
 ../src/queue.c \
 ../src/scrambler.c \
 ../src/sysinit.c 
@@ -19,6 +21,8 @@ OBJS += \
 ./src/LISAtransmitter.o \
 ./src/cr_startup_lpc175x_6x.o \
 ./src/crp.o \
+./src/helperFunctions.o \
+./src/linearBlockCoder.o \
 ./src/queue.o \
 ./src/scrambler.o \
 ./src/sysinit.o 
@@ -29,6 +33,8 @@ C_DEPS += \
 ./src/LISAtransmitter.d \
 ./src/cr_startup_lpc175x_6x.d \
 ./src/crp.d \
+./src/helperFunctions.d \
+./src/linearBlockCoder.d \
 ./src/queue.d \
 ./src/scrambler.d \
 ./src/sysinit.d 

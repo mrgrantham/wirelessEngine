@@ -7,7 +7,7 @@
 #include "stdlib.h"
 #define MAX_PACKET_SIZE 64 // in bytes
 #define RECEIVER_BUFFER_SIZE 128 // in bytes
-#define SEGMENT_SIZE 8 // in bytes
+#define SEGMENT_SIZE 10 // in bytes
 #define PREFIX_SIZE 32 // in bytes
 
 #define RX_PORT 0

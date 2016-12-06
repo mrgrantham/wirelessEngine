@@ -22,6 +22,4 @@ void pop();
 uint8_t getNext(uint8_t reset);
 uint8_t getFront();
 uint8_t getBack();
-void printBinary(uint8_t num);
-void printBinaryWPointer(uint8_t num,int32_t index);
 int32_t getQueueSize();

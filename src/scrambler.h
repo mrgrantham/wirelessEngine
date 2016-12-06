@@ -45,7 +45,5 @@ int32_t getScramblerRegisterSize();
 uint8_t * getDescramblerRegister();
 int32_t getDescramblerRegisterSize();
 
-int8_t getBit(uint8_t source, int8_t index);
-
 
 #endif /* scrambler_h */
