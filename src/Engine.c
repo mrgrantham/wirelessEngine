@@ -27,9 +27,9 @@
 
 #include <cr_section_macros.h>
 
-#define SCRAMBLER_ORDER 3
+#define SCRAMBLER_ORDER 7
 
- #define TICKRATE0_HZ 2000 // 200 bps
+ #define TICKRATE0_HZ 1000 // 200 bps
 #define TICKRATE1_HZ 20
  #define TICKRATE2_HZ 200 // 9600 bps
 
@@ -65,7 +65,7 @@ static uint16_t packetCheckCounter = 0; // used to determine if enough bits have
 int sendCount=0;
 int loopCount=0;
 
-//char *payloadString="JAM";
+//char *payloadString="A";
 char *payloadString="JAJAMES6912";
 
 uint8_t *packet=NULL;
