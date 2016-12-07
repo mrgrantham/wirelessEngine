@@ -27,7 +27,7 @@
 
 #include <cr_section_macros.h>
 
-#define SCRAMBLER_ORDER 11
+#define SCRAMBLER_ORDER 3
 
  #define TICKRATE0_HZ 2000 // 200 bps
 #define TICKRATE1_HZ 20
@@ -56,6 +56,7 @@
 #define SCRAMBLE_ENABLED
 //#define SWITCH_TRANSMIT_ENABLED
 //#define ACK_MODE_ENABLED
+#define LBC_ENABLED
 
 uint8_t receiverBuffer[RECEIVER_BUFFER_SIZE];
 static uint16_t packetCheckCounter = 0; // used to determine if enough bits have been received to check the buffer again
@@ -64,7 +65,7 @@ static uint16_t packetCheckCounter = 0; // used to determine if enough bits have
 int sendCount=0;
 int loopCount=0;
 
-//char *payloadString="JAMES 6912";
+//char *payloadString="JAM";
 char *payloadString="JAJAMES6912";
 
 uint8_t *packet=NULL;
@@ -79,18 +80,23 @@ void testTransmit() {
 
 	scrambleShiftRegisterReset();
 
-	char * payloadStringScrambled = malloc((strlen(payloadString)+1) * sizeof(char));
-	memset(payloadStringScrambled,0,(strlen(payloadString)+1) * sizeof(char));
+	int payloadStringLength = strlen(payloadString)+1;
+	char * payloadStringScrambled = malloc(payloadStringLength * sizeof(char));
+	memset(payloadStringScrambled,0,(payloadStringLength * sizeof(char)));
 
-	scramble(payloadStringScrambled, payloadString, strlen(payloadString)+1);
+	scramble(payloadStringScrambled, payloadString, payloadStringLength);
 //	printf("%s\n",payloadString);
+//	printf("PAYLOAD BIN: ");
+//	printArrayBin(payloadString,payloadStringLength);
+//	printf("\n");
 	if (firstscram) {
 		printf("SCRAM: %s\n",payloadStringScrambled);
 //		printf("SCRAM BIN: ");
-//		printArrayBin(payloadStringScrambled,11);
+//		printArrayBin(payloadStringScrambled,payloadStringLength);
 //		printf("\n");
 		firstscram = 0;
 	}
+
 
 	composePacket(payloadStringScrambled, &packet, &packetSize);
 	//printReadyPacket(packet, 64);
@@ -212,7 +218,9 @@ int main(void) {
     scrambleShiftRegisterInit(SCRAMBLER_ORDER,0);
     descrambleShiftRegisterInit(SCRAMBLER_ORDER,0);
 
-
+#ifdef LBC_ENABLED
+    initLinearBlockCoder(8);
+#endif
 
     uint32_t timerFreq;
     // setup timers
@@ -298,9 +306,10 @@ int main(void) {
 
 			static uint8_t descrambledString[PAYLOAD_SIZE];
 			memset(descrambledString,0,PAYLOAD_SIZE * sizeof(uint8_t));
-			//printArrayBin(descrambledString, 32);
-		    descrambleShiftRegisterReset();
-		    int endOfStringIndex;
+
+
+			descrambleShiftRegisterReset();
+		    int endOfStringIndex=0;
 		    for (int i =0; i < PAYLOAD_SIZE;i++) {
 		    	if (scrambledString[i] == '\n') {
 		    		endOfStringIndex = i;
@@ -308,9 +317,29 @@ int main(void) {
 		    		break;
 		    	}
 		    }
-//		    memset(&scrambledString[endOfStringIndex],0,PAYLOAD_SIZE-endOfStringIndex-1);
-			descramble(descrambledString,scrambledString,endOfStringIndex);
-			//printArrayBin(descrambledString, 32);
+
+
+#ifdef LBC_ENABLED
+
+		    static int32_t encodedStringLength;
+		    static int32_t decodedStringLength;
+		    char *decodedString;
+		    encodedStringLength = (endOfStringIndex==0)?32:endOfStringIndex+1;
+		    decodedStringLength = encodedStringLength * 2 / 3;
+		    decodedString = malloc(decodedStringLength * sizeof(char));
+		    memset(decodedString,0,decodedStringLength * sizeof(char));
+//		    printf("PAYLOAD REC ");
+//		    printArrayBin(descrambledString, 9);
+
+		    chainDecoding(scrambledString, decodedString,encodedStringLength,decodedStringLength);
+
+//			printArrayBin(scrambledString,decodedStringLength);
+			descramble(descrambledString,decodedString,decodedStringLength);
+			free(decodedString);
+#else
+		    descramble(descrambledString,scrambledString,endOfStringIndex);
+#endif
+		    //printArrayBin(descrambledString, 32);
 			char * payloadCString = makeSubStringChar(0, descrambledString, RECEIVER_BUFFER_SIZE, PAYLOAD_SIZE);
 
 //			printf("INDEX: %d\t  SCRAM PAYLOAD: %s\n",index,scrambledString);

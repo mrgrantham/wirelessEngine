@@ -15,6 +15,8 @@
 #define EXTERNAL_GREEN_LED_PORT 2
 #define EXTERNAL_GREEN_LED_PIN 13
 
+#define LBC_ENABLED
+
 uint8_t * createPrefix(uint8_t A5) {
   uint8_t * prefix = (uint8_t*)malloc(16*sizeof(uint8_t));
 
@@ -73,12 +75,32 @@ void deletePacket(uint8_t **packet, uint32_t *packetSize) {
 void composePacket(char * payloadString, uint8_t ** packet, uint32_t * packetSize) {
 
   //printf("--%s\n",payloadString);
+	static int32_t payloadLength;
+	payloadLength = (int32_t)strlen(payloadString)+1;
 
   uint8_t *prefix5 = createPrefix(0x5);
   uint8_t *prefixA = createPrefix(0xA);
   addToPacket(prefix5,16,packet,packetSize);
   addToPacket(prefixA,16,packet,packetSize);
+#ifdef LBC_ENABLED
+  static char* payloadEncodedString;
+  static int32_t payloadEncodedLength;
+
+  payloadEncodedLength = (payloadLength%2 == 1)?(payloadLength * 3 / 2) + 1:(payloadLength * 3 / 2);
+  payloadEncodedString = malloc(payloadEncodedLength * sizeof(char));
+  memset(payloadEncodedString,0,payloadEncodedLength * sizeof(char));
+  chainEncoding(payloadString, payloadEncodedString,payloadLength,payloadEncodedLength);
+//  printf("PAYLOAD ");
+//  printArrayBin(payloadString,payloadLength);
+//  printf("\nPAYLOAD ENCODED ");
+//  printArrayBin(payloadEncodedString,payloadEncodedLength );
+//  printf("\n");
+  addToPacket((uint8_t*)payloadEncodedString, payloadEncodedLength, packet , packetSize);
+  free(payloadEncodedString);
+
+#else
   addToPacket((uint8_t*)payloadString, strlen(payloadString)+1, packet , packetSize);
+#endif
   addToPacket((uint8_t*)"\n",1, packet , packetSize);
   free(prefixA);
   free(prefix5);

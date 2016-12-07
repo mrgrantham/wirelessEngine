@@ -12,6 +12,8 @@
 #include <stdio.h>
 
 void initLinearBlockCoder(int32_t codeLength);
+void chainEncoding(char *sourceString, char *encodedString,int sourceStringLength,int encodeStringLength);
+void chainDecoding(char *sourceString, char *decodedString,int sourceStringLength,int decodeStringLength);
 void encode(uint8_t * messageSource, uint8_t *messageCoded, int32_t messageBitLength,int32_t codedMessageBitLength);
 void decode(uint8_t * messageSource, uint8_t *messageDecoded, int32_t messageBitLength,int32_t decodedMessageBitLength);
 void printParityCheckMatrix();
@@ -33,6 +35,7 @@ void printMatrix(uint8_t *matrix, int32_t matrixWidth, int32_t matrixLength);
 void matrixMultiply(uint8_t *matrix1, uint8_t *matrix2, uint8_t *productMatrix, int32_t row1, int32_t col1, int32_t row2, int32_t col2);
 void convertToString(char *aString, uint8_t *matrix, int32_t length);
 void convertTo1DMatrix(char *aString, uint8_t *matrix, int32_t length);
+void convertTo1DMatrixStartBit(char *aString, uint8_t *matrix, int32_t bitLength,int32_t startBitIndex);
 void checkParityGenerator();
 int32_t syndromeMatch(uint8_t *sWord,int32_t sLength);
 

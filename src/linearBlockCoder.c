@@ -28,7 +28,7 @@ uint8_t linearIndMatrix[] = {
      0, 0, 0, 1 ,
      1, 0, 1, 0 ,
      0, 1, 1, 0 ,
-     0, 0, 0, 0 ,
+     1, 1, 1, 1 ,
      0, 0, 1, 1 };
 
 void initLinearBlockCoder(int32_t codeLength){
@@ -49,12 +49,43 @@ void initLinearBlockCoder(int32_t codeLength){
     generateParityCheck(codeLength);
 }
 
+void chainEncoding(char *sourceString, char *encodedString,int sourceStringLength,int encodeStringLength){
+    uint8_t matrix[8];
+    uint8_t *encodedMatrix = malloc(encodeStringLength * 12 * sizeof(uint8_t));
+    memset(encodedMatrix, 0, encodeStringLength * 12 * sizeof(uint8_t));
+
+    for(int i = 0; i < sourceStringLength; i++) {
+        memset(matrix, 0, 8);
+        convertTo1DMatrix(&sourceString[i], matrix, 8);
+        encode(matrix, &encodedMatrix[i*12], 8, 12);
+    }
+
+    convertToString(encodedString, encodedMatrix, encodeStringLength);
+    free(encodedMatrix);
+}
+
+void chainDecoding(char *sourceString, char *decodedString,int sourceStringLength,int decodeStringLength){
+    uint8_t matrix[12];
+    uint8_t *decodedMatrix = malloc(decodeStringLength * 12 * sizeof(uint8_t));
+    memset(decodedMatrix, 0, decodeStringLength * 12 * sizeof(uint8_t));
+    for(int i = 0; i < decodeStringLength; i++) {
+        memset(matrix, 0, 12);
+        int32_t decodeByteIndex = i*3/2;
+        convertTo1DMatrixStartBit(&sourceString[decodeByteIndex], matrix, 12,(i%2)*4);
+        decode(matrix, &decodedMatrix[i*8], 12, 8);
+    }
+
+    convertToString(decodedString, decodedMatrix, decodeStringLength);
+    free(decodedMatrix);
+}
+
 void encode(uint8_t * messageSource, uint8_t *messageCoded, int32_t messageBitLength,int32_t codedMessageBitLength){
     matrixMultiply(messageSource, generatorMatrix, messageCoded, 1, messageBitLength, messageBitLength, codedMessageBitLength);
 }
 
 void decode(uint8_t * messageSource, uint8_t *messageDecoded, int32_t codedMessageBitLength,int32_t decodedMessageBitLength){
-    uint8_t *syndromeVector = malloc(P_MATRIX_WIDTH * sizeof(uint8_t));
+    static uint8_t *syndromeVector;
+    syndromeVector = malloc(P_MATRIX_WIDTH * sizeof(uint8_t));
     memset(syndromeVector, 0, P_MATRIX_WIDTH);
     matrixMultiply(messageSource, parityCheckMatrix, syndromeVector, 1, codedMessageBitLength, codedMessageBitLength, P_MATRIX_WIDTH);
     static int32_t sMatch;
@@ -62,15 +93,15 @@ void decode(uint8_t * messageSource, uint8_t *messageDecoded, int32_t codedMessa
     memcpy(messageDecoded, messageSource, decodedMessageBitLength);
     if(sMatch > -1) {
         messageDecoded[sMatch] = (~(messageDecoded[sMatch]))&0x01;
-        printMatrix(messageDecoded, decodedMessageBitLength, 1);
-        printf("\n");
+//        printMatrix(messageDecoded, decodedMessageBitLength, 1);
+//        printf("\n");
 
     } else {
-        printf("NO SYNDROME MATCH\n");
+//        printf("NO SYNDROME MATCH\n");
     }
-    printf("SYNDROM WORD        ");
-    printMatrix(syndromeVector, P_MATRIX_WIDTH, 1);
-    
+//    printf("SYNDROM WORD        ");
+//    printMatrix(syndromeVector, P_MATRIX_WIDTH, 1);
+    free(syndromeVector);
 }
 
 void convertTo1DMatrix(char *aString, uint8_t *matrix, int32_t bitLength){
@@ -81,10 +112,18 @@ void convertTo1DMatrix(char *aString, uint8_t *matrix, int32_t bitLength){
     }
 }
 
+void convertTo1DMatrixStartBit(char *aString, uint8_t *matrix, int32_t bitLength,int32_t startBitIndex){
+
+    for (int32_t i = 0; i < bitLength; i++) {
+        uint8_t theBit = getBit(aString[(startBitIndex+i)>>3], (7-(startBitIndex+i)%8));
+        matrix[i] = theBit;
+    }
+}
+
 void convertToString(char *aString, uint8_t *matrix, int32_t length){
-    printMatrix(matrix, (length<<3), 1);
+//    printMatrix(matrix, (length<<3), 1);
     for (int32_t i = 0; i < (length<<3); i++) {
-        setBit((uint8_t*)&aString[i>>3], (7-i)%8, matrix[i]);
+        setBit((uint8_t*)&aString[i>>3], 7-(i%8), matrix[i]);
     }
 }
 void addErrorStrIndex(char *code, int32_t messageLength,int32_t errorIndex){
@@ -113,7 +152,7 @@ void checkParityGenerator() {
     productMatrix = malloc((aCodeLength + P_MATRIX_WIDTH) * (aCodeLength + P_MATRIX_WIDTH) * sizeof(uint8_t));
     memset(productMatrix, 0, (aCodeLength + P_MATRIX_WIDTH) * (aCodeLength + P_MATRIX_WIDTH) * sizeof(uint8_t));
     matrixMultiply(generatorMatrix, parityCheckMatrix, productMatrix, aCodeLength, aCodeLength + P_MATRIX_WIDTH, aCodeLength + P_MATRIX_WIDTH, P_MATRIX_WIDTH);
-    printMatrix(productMatrix, aCodeLength + P_MATRIX_WIDTH, aCodeLength + P_MATRIX_WIDTH);
+//    printMatrix(productMatrix, aCodeLength + P_MATRIX_WIDTH, aCodeLength + P_MATRIX_WIDTH);
 }
 
 void matrixMultiply(uint8_t *matrix1, uint8_t *matrix2, uint8_t *productMatrix, int32_t row1, int32_t col1, int32_t row2, int32_t col2) {
@@ -204,6 +243,7 @@ void generateLinearIndependance(int32_t codeLength){
         } while (doesMatch);
 
     }
+    free(sum);
 }
 
 int8_t stringMatch(uint8_t *str1, uint8_t *str2, int32_t strLength){
@@ -264,7 +304,7 @@ void generateGenerator(int32_t codeLength) {
     uint8_t *tempIdentity = malloc(codeLength * codeLength * sizeof(tempIdentity[0]));
     memset(tempIdentity, 0, codeLength * codeLength * sizeof(tempIdentity[0]));
     generateIdentityMatrix(tempIdentity, codeLength);
-    printMatrix(tempIdentity, codeLength, codeLength);
+//    printMatrix(tempIdentity, codeLength, codeLength);
     for (int i = 0; i < codeLength; i++) {
         for (int j = 0; j < codeLength + P_MATRIX_WIDTH; j++) {
             if (j < codeLength) {
@@ -281,7 +321,7 @@ void generateParityCheck(int32_t codeLength) {
     uint8_t *tempIdentity = malloc(codeLength * codeLength * sizeof(tempIdentity[0]));
     memset(tempIdentity, 0, P_MATRIX_WIDTH * P_MATRIX_WIDTH * sizeof(tempIdentity[0]));
     generateIdentityMatrix(tempIdentity, P_MATRIX_WIDTH);
-    printMatrix(tempIdentity, P_MATRIX_WIDTH, P_MATRIX_WIDTH);
+//    printMatrix(tempIdentity, P_MATRIX_WIDTH, P_MATRIX_WIDTH);
     for (int i = 0; i < codeLength + P_MATRIX_WIDTH; i++) {
         for (int j = 0; j < P_MATRIX_WIDTH; j++) {
             if (i < codeLength) {
